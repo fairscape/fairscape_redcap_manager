@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs").promises;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -10,9 +11,31 @@ function createWindow() {
       contextIsolation: false,
     },
   });
-
   win.loadFile("index.html");
 }
+
+const getProjectsPath = () => {
+  return path.join(app.getPath("userData"), "projects.json");
+};
+
+ipcMain.handle("load-projects", async () => {
+  try {
+    const projectsPath = getProjectsPath();
+    const data = await fs.readFile(projectsPath, "utf8");
+    return JSON.parse(data);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+});
+
+ipcMain.handle("save-projects", async (event, projects) => {
+  const projectsPath = getProjectsPath();
+  await fs.writeFile(projectsPath, JSON.stringify(projects, null, 2));
+  return true;
+});
 
 app.whenReady().then(createWindow);
 

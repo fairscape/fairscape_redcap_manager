@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { ipcRenderer } from "electron";
 import { Pencil, Trash2, Save, X, Plus, ExternalLink } from "lucide-react";
 import {
   ContentWrapper,
@@ -224,6 +225,11 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
 
   const [newProject, setNewProject] = useState(emptyProject);
 
+  // Load projects on component mount
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
   const showNotification = (message, severity = "success") => {
     setNotification({
       open: true,
@@ -231,52 +237,36 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
       severity,
     });
     setTimeout(() => {
-      setNotification({ ...notification, open: false });
+      setNotification((prev) => ({ ...prev, open: false }));
     }, 6000);
   };
 
-  const loadProjects = () => {
-    const savedProjects = localStorage.getItem("redcapProjects");
-    if (savedProjects) {
-      setProjects(JSON.parse(savedProjects));
-    }
-  };
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const saveProjects = (updatedProjects) => {
-    localStorage.setItem("redcapProjects", JSON.stringify(updatedProjects));
-    setProjects(updatedProjects);
-  };
-
-  const handleUpdate = async (projectId, updatedProject) => {
+  const loadProjects = async () => {
     try {
-      const updatedProjects = projects.map((project) =>
-        project.id === projectId
-          ? { ...updatedProject, id: projectId }
-          : project
-      );
-      saveProjects(updatedProjects);
-      setEditingId(null);
-      setEditProject(null);
-      showNotification("Project updated successfully");
+      const response = await ipcRenderer.invoke("load-projects");
+      if (Array.isArray(response)) {
+        setProjects(response);
+      }
     } catch (error) {
-      showNotification("Failed to update project", "error");
+      console.error("Error loading projects:", error);
+      showNotification("Failed to load projects", "error");
     }
   };
 
-  const handleDelete = (projectId) => {
+  const saveProjects = async (updatedProjects) => {
     try {
-      const updatedProjects = projects.filter(
-        (project) => project.id !== projectId
-      );
-      saveProjects(updatedProjects);
-      showNotification("Project deleted successfully");
+      await ipcRenderer.invoke("save-projects", updatedProjects);
+      setProjects(updatedProjects);
+      await loadProjects(); // Reload projects after save
     } catch (error) {
-      showNotification("Failed to delete project", "error");
+      console.error("Error saving projects:", error);
+      showNotification("Failed to save projects", "error");
     }
+  };
+
+  const startEditing = (project) => {
+    setEditingId(project.id);
+    setEditProject({ ...project });
   };
 
   const handleAdd = async () => {
@@ -286,7 +276,6 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
         return;
       }
 
-      // Fetch form data when adding new project
       const response = await fetchProjectData();
       const projectId = Date.now().toString();
       const projectWithData = {
@@ -296,7 +285,7 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
       };
 
       const updatedProjects = [...projects, projectWithData];
-      saveProjects(updatedProjects);
+      await saveProjects(updatedProjects);
       setNewProject(emptyProject);
       showNotification("Project added successfully");
     } catch (error) {
@@ -304,13 +293,35 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
     }
   };
 
-  const startEditing = (project) => {
-    setEditingId(project.id);
-    setEditProject({ ...project });
+  const handleUpdate = async (projectId, updatedProject) => {
+    try {
+      const updatedProjects = projects.map((project) =>
+        project.id === projectId
+          ? { ...updatedProject, id: projectId }
+          : project
+      );
+      await saveProjects(updatedProjects);
+      setEditingId(null);
+      setEditProject(null);
+      showNotification("Project updated successfully");
+    } catch (error) {
+      showNotification("Failed to update project", "error");
+    }
+  };
+
+  const handleDelete = async (projectId) => {
+    try {
+      const updatedProjects = projects.filter(
+        (project) => project.id !== projectId
+      );
+      await saveProjects(updatedProjects);
+      showNotification("Project deleted successfully");
+    } catch (error) {
+      showNotification("Failed to delete project", "error");
+    }
   };
 
   const selectProject = (project) => {
-    localStorage.setItem("selectedProject", JSON.stringify(project));
     onProjectSelect(project);
   };
 
