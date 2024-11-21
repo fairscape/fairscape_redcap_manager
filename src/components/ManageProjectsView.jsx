@@ -205,7 +205,7 @@ const fetchProjectData = () => {
   });
 };
 
-const ManageProjectsView = ({ setCurrentView }) => {
+const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
   const [projects, setProjects] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editProject, setEditProject] = useState(null);
@@ -311,7 +311,7 @@ const ManageProjectsView = ({ setCurrentView }) => {
 
   const selectProject = (project) => {
     localStorage.setItem("selectedProject", JSON.stringify(project));
-    setCurrentView("download");
+    onProjectSelect(project);
   };
 
   return (

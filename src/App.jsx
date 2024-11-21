@@ -17,17 +17,29 @@ const theme = createTheme({
 
 export default function App() {
   const [currentView, setCurrentView] = useState("questionnaire");
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const renderContent = () => {
     switch (currentView) {
       case "questionnaire":
         return <QuestionnaireView setCurrentView={setCurrentView} />;
       case "add-project":
-        return <ManageProjectsView setCurrentView={setCurrentView} />;
-      case "view-project":
-        return <ViewProject setCurrentView={setCurrentView} />;
+        return (
+          <ManageProjectsView
+            setCurrentView={setCurrentView}
+            onProjectSelect={(project) => {
+              setSelectedProject(project);
+              setCurrentView("download");
+            }}
+          />
+        );
       case "download":
-        return <DownloadSnapshotView setCurrentView={setCurrentView} />;
+        return (
+          <DownloadSnapshotView
+            setCurrentView={setCurrentView}
+            project={selectedProject}
+          />
+        );
       case "deidentify":
         return <div>TO-DO</div>;
       case "upload":
