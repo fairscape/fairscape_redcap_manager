@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ThemeProvider, createTheme } from "@mui/material";
+import { Snackbar, Alert } from "@mui/material";
 import { AppContainer, MainContent } from "./components/styles";
 import SidebarComponent from "./components/SideBar";
 import QuestionnaireView from "./components/QuestionnaireView";
@@ -18,18 +19,58 @@ const theme = createTheme({
 export default function App() {
   const [currentView, setCurrentView] = useState("questionnaire");
   const [selectedProject, setSelectedProject] = useState(null);
+  const [pendingView, setPendingView] = useState(null);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showNotification = (message, severity = "success") => {
+    setNotification({
+      open: true,
+      message,
+      severity,
+    });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, open: false }));
+    }, 6000);
+  };
+
+  const handleViewChange = (view) => {
+    if (
+      !selectedProject &&
+      (view === "download" || view === "deidentify" || view === "upload")
+    ) {
+      setPendingView(view);
+      showNotification("Please select a project first", "warning");
+      setCurrentView("add-project");
+    } else {
+      setCurrentView(view);
+    }
+  };
 
   const renderContent = () => {
     switch (currentView) {
       case "questionnaire":
-        return <QuestionnaireView setCurrentView={setCurrentView} />;
+        return (
+          <QuestionnaireView
+            setCurrentView={setCurrentView}
+            showNotification={showNotification}
+          />
+        );
       case "add-project":
         return (
           <ManageProjectsView
             setCurrentView={setCurrentView}
             onProjectSelect={(project) => {
               setSelectedProject(project);
-              setCurrentView("download");
+              if (pendingView) {
+                setCurrentView(pendingView);
+                setPendingView(null);
+              } else {
+                setCurrentView("download");
+              }
             }}
           />
         );
@@ -54,9 +95,15 @@ export default function App() {
       <AppContainer>
         <SidebarComponent
           currentView={currentView}
-          setCurrentView={setCurrentView}
+          setCurrentView={handleViewChange}
         />
         <MainContent>{renderContent()}</MainContent>
+        <Snackbar
+          open={notification.open}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert severity={notification.severity}>{notification.message}</Alert>
+        </Snackbar>
       </AppContainer>
     </ThemeProvider>
   );

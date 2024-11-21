@@ -7,31 +7,38 @@ const steps = [
     description: "Connect to new/edit REDCap projects with your API token",
     action: "add-project",
   },
-  // {
-  //   text: "View Project Data",
-  //   description: "Browse and analyze data from your connected projects",
-  //   action: "view-project",
-  // },
   {
     text: "View/Export Project Data",
     description:
       "View project metadata and download snapshots of your project data",
     action: "download",
+    requiresProject: true,
   },
   {
     text: "De-Identify Project Data",
     description:
       "De-Identify project data by running your de-identification software",
     action: "deidentify",
+    requiresProject: true,
   },
   {
     text: "Package & Upload REDCap Data",
     description: "Upload de-identified data to FAIRSCAPE/Dataverse",
     action: "upload",
+    requiresProject: true,
   },
 ];
 
-const QuestionnaireView = ({ setCurrentView }) => {
+const QuestionnaireView = ({ setCurrentView, showNotification }) => {
+  const handleAction = (step) => {
+    if (step.requiresProject) {
+      showNotification("Please select a project first", "warning");
+      setCurrentView("add-project");
+    } else {
+      setCurrentView(step.action);
+    }
+  };
+
   return (
     <ContentWrapper>
       <h2>REDCap Data Management</h2>
@@ -44,9 +51,7 @@ const QuestionnaireView = ({ setCurrentView }) => {
                 <h3>{step.text}</h3>
                 {step.description && <p>{step.description}</p>}
               </TextContent>
-              <button onClick={() => setCurrentView(step.action)}>
-                Select
-              </button>
+              <button onClick={() => handleAction(step)}>Select</button>
             </CardContent>
           </StyledCard.Body>
         </StyledCard>
