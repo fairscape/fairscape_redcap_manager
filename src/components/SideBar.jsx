@@ -8,7 +8,7 @@ const sidebarItems = [
     action: "questionnaire",
   },
   {
-    text: "REDCap Project Management",
+    text: "Manage Projects",
     action: "add-project",
   },
   // {

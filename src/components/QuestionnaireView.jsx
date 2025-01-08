@@ -41,7 +41,7 @@ const QuestionnaireView = ({ setCurrentView, showNotification }) => {
 
   return (
     <ContentWrapper>
-      <h2>REDCap Data Management</h2>
+      <h2>FAIRSCAPE: REDCap Data Manager</h2>
       <p>Select any of the following options:</p>
       {steps.map((step, index) => (
         <StyledCard key={index}>
