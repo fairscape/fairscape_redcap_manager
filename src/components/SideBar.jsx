@@ -11,13 +11,13 @@ const sidebarItems = [
     text: "Manage Projects",
     action: "add-project",
   },
-  // {
-  //   text: "View Project Data",
-  //   action: "view-project",
-  // },
   {
     text: "View/Export Project Data",
     action: "download",
+  },
+  {
+    text: "Preview & Validate",
+    action: "preview",
   },
   {
     text: "De-Identify Data",

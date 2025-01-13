@@ -7,6 +7,7 @@ import QuestionnaireView from "./components/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
 import ViewProject from "./components/ViewProject";
 import DownloadSnapshotView from "./components/DownloadSnapshotView";
+import PreviewValidationView from "./components/PreviewValidationView";
 
 const theme = createTheme({
   palette: {
@@ -19,6 +20,7 @@ const theme = createTheme({
 export default function App() {
   const [currentView, setCurrentView] = useState("questionnaire");
   const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedData, setSelectedData] = useState(null);
   const [pendingView, setPendingView] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
@@ -40,7 +42,10 @@ export default function App() {
   const handleViewChange = (view) => {
     if (
       !selectedProject &&
-      (view === "download" || view === "deidentify" || view === "upload")
+      (view === "download" ||
+        view === "preview" ||
+        view === "deidentify" ||
+        view === "upload")
     ) {
       setPendingView(view);
       showNotification("Please select a project first", "warning");
@@ -48,6 +53,11 @@ export default function App() {
     } else {
       setCurrentView(view);
     }
+  };
+
+  const handleDataSelect = (data) => {
+    setSelectedData(data);
+    setCurrentView("preview");
   };
 
   const renderContent = () => {
@@ -79,6 +89,15 @@ export default function App() {
           <DownloadSnapshotView
             setCurrentView={setCurrentView}
             project={selectedProject}
+            onDataSelect={handleDataSelect}
+          />
+        );
+      case "preview":
+        return (
+          <PreviewValidationView
+            project={selectedProject}
+            selectedData={selectedData}
+            onValidated={() => setCurrentView("deidentify")}
           />
         );
       case "deidentify":

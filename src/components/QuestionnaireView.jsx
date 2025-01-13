@@ -9,9 +9,14 @@ const steps = [
   },
   {
     text: "View/Export Project Data",
-    description:
-      "View project metadata and download snapshots of your project data",
+    description: "View project metadata and select data for export",
     action: "download",
+    requiresProject: true,
+  },
+  {
+    text: "Preview & Validate Data",
+    description: "Review selected data and validate against schema",
+    action: "preview",
     requiresProject: true,
   },
   {
