@@ -86,6 +86,11 @@ export const Footer = styled.div`
   padding: 1rem;
   display: flex;
   justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
 `;
 
 export const DownloadButton = styled(ActionButton)`
@@ -93,9 +98,98 @@ export const DownloadButton = styled(ActionButton)`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  min-width: 200px;
+  height: auto;
+
+  &:hover:not(:disabled) {
+    background-color: #1565c0;
+  }
 
   &:disabled {
     background-color: #9ca3af;
     cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  /* Override any global focus styles */
+  &:focus,
+  &:focus-visible {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+  }
+
+  /* Ensure the span inside button is properly styled */
+  span {
+    font-size: inherit;
+    color: inherit;
+  }
+`;
+
+export const ModeSelectorContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+`;
+
+export const ModeButton = styled.button`
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  ${(props) =>
+    props.active
+      ? `
+    background-color: #1e40af;
+    color: white;
+  `
+      : `
+    background-color: #f3f4f6;
+    color: #374151;
+    &:hover {
+      background-color: #e5e7eb;
+    }
+  `}
+`;
+
+export const DateRangeContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  max-width: 32rem;
+  margin-top: 1rem;
+`;
+
+export const DateInputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+export const DateLabel = styled.label`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+`;
+
+export const DateInput = styled.input`
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  width: 100%;
+
+  &:focus {
+    outline: none;
+    border-color: #1e40af;
+    ring: 2px solid rgba(30, 64, 175, 0.2);
   }
 `;
