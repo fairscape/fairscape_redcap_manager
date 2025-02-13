@@ -7,9 +7,16 @@ export const accentColorHover = "#0056b3";
 export const AppContainer = styled.div`
   display: flex;
   width: 100%;
-  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
 `;
 
+export const MainContent = styled.div`
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  height: 100vh;
+`;
 export const Sidebar = styled.div`
   width: 250px;
   min-width: 250px;
@@ -45,14 +52,6 @@ export const SidebarItem = styled.div`
   &:hover {
     background-color: ${(props) => (props.active ? accentColor : "#3e3e3e")};
   }
-`;
-
-export const MainContent = styled.div`
-  flex: 1;
-  padding: 20px;
-  background-color: white;
-  min-width: 0;
-  overflow-x: hidden;
 `;
 
 export const ContentWrapper = styled.div`

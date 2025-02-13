@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { ThemeProvider, createTheme } from "@mui/material";
 import { Snackbar, Alert } from "@mui/material";
-import { AppContainer, MainContent } from "./components/styles";
 import SidebarComponent from "./components/SideBar";
 import QuestionnaireView from "./components/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
 import ViewProject from "./components/ViewProject";
 import DownloadSnapshotView from "./components/DownloadSnapshotView";
 import PreviewValidationView from "./components/PreviewValidationView";
+import { AppContainer, MainContent } from "./components/styles";
 
 const theme = createTheme({
   palette: {
@@ -116,13 +116,17 @@ export default function App() {
           currentView={currentView}
           setCurrentView={handleViewChange}
         />
-        <MainContent>{renderContent()}</MainContent>
-        <Snackbar
-          open={notification.open}
-          anchorOrigin={{ vertical: "top", horizontal: "right" }}
-        >
-          <Alert severity={notification.severity}>{notification.message}</Alert>
-        </Snackbar>
+        <MainContent>
+          {renderContent()}
+          <Snackbar
+            open={notification.open}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+          >
+            <Alert severity={notification.severity}>
+              {notification.message}
+            </Alert>
+          </Snackbar>
+        </MainContent>
       </AppContainer>
     </ThemeProvider>
   );
