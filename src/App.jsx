@@ -4,8 +4,7 @@ import { Snackbar, Alert } from "@mui/material";
 import SidebarComponent from "./components/SideBar";
 import QuestionnaireView from "./components/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
-import ViewProject from "./components/ViewProject";
-import DownloadSnapshotView from "./components/DownloadSnapshotView";
+import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
 import PreviewValidationView from "./components/PreviewValidationView";
 import { AppContainer, MainContent } from "./components/styles";
 

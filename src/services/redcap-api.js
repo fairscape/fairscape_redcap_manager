@@ -137,3 +137,51 @@ export const exportMetadata = async (apiUrl, token) => {
     throw new Error(`Failed to fetch metadata: ${error.message}`);
   }
 };
+
+export const exportRecords = async (apiUrl, token, options = {}) => {
+  // Validate required parameters
+  if (!apiUrl || !token) {
+    throw new Error("API URL and token are required");
+  }
+
+  // Create form data for the POST request
+  const formData = new FormData();
+  formData.append("token", token);
+  formData.append("content", "record");
+  formData.append("format", "json");
+  formData.append("type", "flat");
+  formData.append("returnFormat", "csv");
+
+  // Add optional fields if provided
+  if (options.fields && Array.isArray(options.fields)) {
+    formData.append("fields", JSON.stringify(options.fields));
+  }
+
+  // Add optional forms if provided
+  if (options.forms && Array.isArray(options.forms)) {
+    formData.append("forms", JSON.stringify(options.forms));
+  }
+
+  // Add date range if provided
+  if (options.dateRangeBegin) {
+    formData.append("dateRangeBegin", options.dateRangeBegin);
+  }
+  if (options.dateRangeEnd) {
+    formData.append("dateRangeEnd", options.dateRangeEnd);
+  }
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch records: ${error.message}`);
+  }
+};
