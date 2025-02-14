@@ -148,9 +148,9 @@ export const exportRecords = async (apiUrl, token, options = {}) => {
   const formData = new FormData();
   formData.append("token", token);
   formData.append("content", "record");
-  formData.append("format", "json");
+  formData.append("format", "csv");
   formData.append("type", "flat");
-  formData.append("returnFormat", "csv");
+  formData.append("returnFormat", "json");
 
   // Add optional fields if provided
   if (options.fields && Array.isArray(options.fields)) {
@@ -180,7 +180,7 @@ export const exportRecords = async (apiUrl, token, options = {}) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    return await response.text();
   } catch (error) {
     throw new Error(`Failed to fetch records: ${error.message}`);
   }
