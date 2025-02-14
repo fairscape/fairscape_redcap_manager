@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Download, Calendar } from "lucide-react";
+import { exportRecords } from "../../services/redcap-api";
 import {
   PageContainer,
   HeaderSection,
@@ -95,6 +96,17 @@ const DownloadSnapshotView = ({ project }) => {
     });
     setSelectedForms(allForms);
     setSelectedFields(allFields);
+  };
+
+  const downloadFile = (data, filename) => {
+    const blob = new Blob([data], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
   };
 
   const handleDownload = async () => {

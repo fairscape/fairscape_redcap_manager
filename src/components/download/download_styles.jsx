@@ -94,6 +94,8 @@ export const Footer = styled.div`
 `;
 
 export const DownloadButton = styled(ActionButton)`
+  background-color: #ebf5ff;
+  color: #1e40af;
   padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
@@ -101,8 +103,6 @@ export const DownloadButton = styled(ActionButton)`
   border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
-  background-color: #1976d2;
-  color: white;
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -110,23 +110,22 @@ export const DownloadButton = styled(ActionButton)`
   height: auto;
 
   &:hover:not(:disabled) {
-    background-color: #1565c0;
+    background-color: #dbeafe;
   }
 
   &:disabled {
-    background-color: #9ca3af;
+    background-color: #f3f4f6;
+    color: #9ca3af;
     cursor: not-allowed;
     opacity: 0.7;
   }
 
-  /* Override any global focus styles */
   &:focus,
   &:focus-visible {
-    outline: 2px solid #1976d2;
+    outline: 2px solid #1e40af;
     outline-offset: 2px;
   }
 
-  /* Ensure the span inside button is properly styled */
   span {
     font-size: inherit;
     color: inherit;

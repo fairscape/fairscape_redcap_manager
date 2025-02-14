@@ -61,48 +61,6 @@ export const ContentWrapper = styled.div`
   min-width: 0;
 `;
 
-export const StyledCard = styled(Card)`
-  margin-bottom: 1rem;
-  border-radius: 4px;
-  border: 1px solid #444;
-  width: 100%;
-
-  .card-body {
-    padding: 1.25rem;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: #333;
-    text-align: left;
-  }
-
-  p {
-    color: #666;
-    margin: 0.5rem 0 0;
-    text-align: left;
-  }
-
-  button {
-    background-color: ${accentColor};
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    min-width: 100px;
-    &:hover {
-      background-color: ${accentColorHover};
-    }
-    &:disabled {
-      background-color: #6c757d;
-      cursor: not-allowed;
-    }
-  }
-`;
-
 export const CardContent = styled.div`
   display: flex;
   justify-content: space-between;
@@ -170,20 +128,11 @@ export const TableHeaderCell = styled.th`
 `;
 
 export const ActionButton = styled.button`
-  background-color: ${(props) => {
-    switch (props.variant) {
-      case "secondary":
-        return props.theme.accentColorHover || "#0056b3";
-      case "success":
-        return "#28a745";
-      default:
-        return props.theme.accentColor || "#007bff";
-    }
-  }};
+  background-color: #ebf5ff;
+  color: #1e40af;
   border: none;
   padding: 8px;
-  border-radius: 4px;
-  color: white;
+  border-radius: 0.375rem;
   cursor: pointer;
   transition: background-color 0.2s;
   margin-left: 8px;
@@ -191,18 +140,17 @@ export const ActionButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-weight: 500;
 
   &:hover {
-    background-color: ${(props) => {
-      switch (props.variant) {
-        case "secondary":
-          return "#c82333";
-        case "success":
-          return "#218838";
-        default:
-          return props.theme.accentColorHover || "#0056b3";
-      }
-    }};
+    background-color: #dbeafe;
+  }
+
+  &:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 `;
 
@@ -210,6 +158,52 @@ export const AddButton = styled(ActionButton)`
   padding: 8px 16px;
   svg {
     margin-right: 8px;
+  }
+`;
+export const StyledCard = styled(Card)`
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+  width: 100%;
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+    text-align: left;
+  }
+
+  p {
+    color: #666;
+    margin: 0.5rem 0 0;
+    text-align: left;
+  }
+
+  button {
+    background-color: #ebf5ff;
+    color: #1e40af;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    min-width: 100px;
+    font-weight: 500;
+
+    &:hover {
+      background-color: #dbeafe;
+    }
+
+    &:disabled {
+      background-color: #f3f4f6;
+      color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
   }
 `;
 
