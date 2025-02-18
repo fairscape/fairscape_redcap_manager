@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { rocrate_create } from "@fairscape/utils";
 import { ipcRenderer } from "electron";
+import { exportProjectInfo } from "../services/redcap-api";
 import {
   FormCard,
   FormHeader,
@@ -59,7 +60,7 @@ const projects = [
   { name: "PreMo", guid: "ark:59852/project-premo" },
 ];
 
-function InitForm({ rocratePath, setRocratePath, onSuccess }) {
+function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
   const [formData, setFormData] = useState({
     name: "",
     organization_name: "",
@@ -73,6 +74,30 @@ function InitForm({ rocratePath, setRocratePath, onSuccess }) {
   const [showOverwriteConfirmation, setShowOverwriteConfirmation] =
     useState(false);
   const [notification, setNotification] = useState(null);
+
+  useEffect(() => {
+    const fetchProjectInfo = async () => {
+      if (selectedProject?.url && selectedProject?.token) {
+        try {
+          const projectInfo = await exportProjectInfo(
+            selectedProject.url,
+            selectedProject.token
+          );
+          setFormData((prevData) => ({
+            ...prevData,
+            name: projectInfo.project_title || "",
+          }));
+        } catch (error) {
+          setNotification({
+            message: `Failed to fetch project info: ${error.message}`,
+            severity: "error",
+          });
+        }
+      }
+    };
+
+    fetchProjectInfo();
+  }, [selectedProject]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -129,7 +154,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess }) {
         formData.description,
         formData.author,
         formData.keywords,
-        "pipeline", // fixed to pipeline type
+        "pipeline",
         guid,
         formData.license
       );

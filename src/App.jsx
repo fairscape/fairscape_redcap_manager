@@ -106,6 +106,7 @@ export default function App() {
             rocratePath={rocratePath}
             setRocratePath={setRocratePath}
             onSuccess={handleInitCrateSuccess}
+            selectedProject={selectedProject}
           />
         );
       case "download":
