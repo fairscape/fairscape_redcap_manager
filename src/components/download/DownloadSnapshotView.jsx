@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Download, Calendar } from "lucide-react";
+import { Download } from "lucide-react";
 import { exportRecords } from "../../services/redcap-api";
+
+// Components
+import { FormCard } from "./components/FormCard";
+import { DateRangeSelector } from "./components/DateRangeSelector";
+import { downloadFile } from "./utils/downloadFile";
+
+// Styled Components
 import {
   PageContainer,
   HeaderSection,
@@ -12,27 +19,9 @@ import {
   DownloadButton,
   ModeSelectorContainer,
   ModeButton,
-  DateRangeContainer,
-  DateInputGroup,
-  DateLabel,
-  DateInput,
 } from "./download_styles";
 
-import {
-  FormCard,
-  FormHeader,
-  FormTitleWrapper,
-  FormTitle,
-  ExpandIcon,
-  FormTableContainer,
-  FormTable,
-  FormTableHead,
-  FormTableHeader,
-  FormTableBody,
-  FormTableCell,
-  ValidationInfo,
-  Title,
-} from "../styles";
+import { Title } from "../styles";
 
 const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [projectData, setProjectData] = useState([]);
@@ -127,29 +116,8 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     setSelectedFields(allFields);
   };
 
-  const downloadFile = (data, filename) => {
-    const blob = new Blob([data], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-
-    // Store the downloaded file in the filesystem
-    const fileData = new Uint8Array(
-      data.split("").map((char) => char.charCodeAt(0))
-    );
-    window.fs
-      .writeFile(filename, fileData)
-      .then(() => {
-        // Call the callback with the file path
-        onDownloadComplete(filename);
-      })
-      .catch((error) => {
-        console.error("Error saving file:", error);
-      });
+  const handleDateChange = (field, value) => {
+    setDateRange((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleDownload = async () => {
@@ -179,7 +147,7 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
           : "";
       const filename = `${projectName}_export${dateRangeStr}_${timestamp}.csv`;
 
-      downloadFile(data, filename);
+      downloadFile(data, filename, onDownloadComplete);
     } catch (error) {
       console.error("Download failed:", error);
     } finally {
@@ -216,34 +184,10 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
         )}
 
         {downloadMode === "date" && (
-          <DateRangeContainer>
-            <DateInputGroup>
-              <DateLabel>Start Date</DateLabel>
-              <DateInput
-                type="date"
-                value={dateRange.dateRangeBegin || ""}
-                onChange={(e) =>
-                  setDateRange((prev) => ({
-                    ...prev,
-                    dateRangeBegin: e.target.value,
-                  }))
-                }
-              />
-            </DateInputGroup>
-            <DateInputGroup>
-              <DateLabel>End Date</DateLabel>
-              <DateInput
-                type="date"
-                value={dateRange.dateRangeEnd || ""}
-                onChange={(e) =>
-                  setDateRange((prev) => ({
-                    ...prev,
-                    dateRangeEnd: e.target.value,
-                  }))
-                }
-              />
-            </DateInputGroup>
-          </DateRangeContainer>
+          <DateRangeSelector
+            dateRange={dateRange}
+            onDateChange={handleDateChange}
+          />
         )}
       </HeaderSection>
 
@@ -251,88 +195,16 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
         {downloadMode === "fields" && (
           <FormContainer>
             {projectData.map((form) => (
-              <FormCard key={form.form_name}>
-                <FormHeader onClick={() => toggleForm(form.form_name)}>
-                  <FormTitleWrapper>
-                    <input
-                      type="checkbox"
-                      checked={selectedForms.has(form.form_name)}
-                      onChange={() => toggleFormSelection(form.form_name)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <ExpandIcon>
-                      {expandedForms.has(form.form_name) ? (
-                        <ChevronUp size={14} />
-                      ) : (
-                        <ChevronDown size={14} />
-                      )}
-                    </ExpandIcon>
-                    <FormTitle>{form.form_name.replace(/_/g, " ")}</FormTitle>
-                  </FormTitleWrapper>
-                  <div>{form.fields.length} fields</div>
-                </FormHeader>
-
-                {expandedForms.has(form.form_name) && (
-                  <FormTableContainer>
-                    <FormTable>
-                      <FormTableHead>
-                        <tr>
-                          <FormTableHeader>Select</FormTableHeader>
-                          <FormTableHeader>Field Name</FormTableHeader>
-                          <FormTableHeader>Type</FormTableHeader>
-                          <FormTableHeader>Label</FormTableHeader>
-                          <FormTableHeader>PHI</FormTableHeader>
-                          <FormTableHeader>Validation</FormTableHeader>
-                          <FormTableHeader>Required</FormTableHeader>
-                        </tr>
-                      </FormTableHead>
-                      <FormTableBody>
-                        {form.fields.map((field) => (
-                          <tr key={field.field_name}>
-                            <FormTableCell>
-                              <input
-                                type="checkbox"
-                                checked={selectedFields.has(
-                                  `${form.form_name}.${field.field_name}`
-                                )}
-                                onChange={() =>
-                                  toggleFieldSelection(
-                                    form.form_name,
-                                    field.field_name
-                                  )
-                                }
-                              />
-                            </FormTableCell>
-                            <FormTableCell $primary>
-                              {field.field_name}
-                            </FormTableCell>
-                            <FormTableCell>{field.field_type}</FormTableCell>
-                            <FormTableCell>{field.field_label}</FormTableCell>
-                            <FormTableCell>{field.phi}</FormTableCell>
-                            <FormTableCell>
-                              {field.validation && (
-                                <ValidationInfo>
-                                  <div>{field.validation}</div>
-                                  {field.validation_min &&
-                                    field.validation_max && (
-                                      <div>
-                                        Range: {field.validation_min} -{" "}
-                                        {field.validation_max}
-                                      </div>
-                                    )}
-                                </ValidationInfo>
-                              )}
-                            </FormTableCell>
-                            <FormTableCell>
-                              {field.required ? "Yes" : "No"}
-                            </FormTableCell>
-                          </tr>
-                        ))}
-                      </FormTableBody>
-                    </FormTable>
-                  </FormTableContainer>
-                )}
-              </FormCard>
+              <FormCard
+                key={form.form_name}
+                form={form}
+                isExpanded={expandedForms.has(form.form_name)}
+                isSelected={selectedForms.has(form.form_name)}
+                selectedFields={selectedFields}
+                onToggleExpand={() => toggleForm(form.form_name)}
+                onToggleSelect={() => toggleFormSelection(form.form_name)}
+                onFieldSelect={toggleFieldSelection}
+              />
             ))}
           </FormContainer>
         )}
