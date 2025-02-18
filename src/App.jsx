@@ -6,13 +6,19 @@ import QuestionnaireView from "./components/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
 import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
 import PreviewValidationView from "./components/PreviewValidationView";
+import InitForm from "./components/InitForm";
 import { AppContainer, MainContent } from "./components/styles";
 
 const theme = createTheme({
   palette: {
+    mode: "dark",
     primary: { main: "#1976d2" },
     secondary: { main: "#dc004e" },
     success: { main: "#2e7d32" },
+    background: {
+      default: "#121212",
+      paper: "#282828",
+    },
   },
 });
 
@@ -22,6 +28,7 @@ export default function App() {
   const [selectedData, setSelectedData] = useState(null);
   const [downloadedFilePath, setDownloadedFilePath] = useState(null);
   const [pendingView, setPendingView] = useState(null);
+  const [rocratePath, setRocratePath] = useState("");
   const [notification, setNotification] = useState({
     open: false,
     message: "",
@@ -69,6 +76,11 @@ export default function App() {
     );
   };
 
+  const handleInitCrateSuccess = () => {
+    showNotification("RO-Crate initialized successfully!", "success");
+    setCurrentView("download");
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case "questionnaire":
@@ -84,13 +96,16 @@ export default function App() {
             setCurrentView={setCurrentView}
             onProjectSelect={(project) => {
               setSelectedProject(project);
-              if (pendingView) {
-                setCurrentView(pendingView);
-                setPendingView(null);
-              } else {
-                setCurrentView("download");
-              }
+              setCurrentView("init-crate");
             }}
+          />
+        );
+      case "init-crate":
+        return (
+          <InitForm
+            rocratePath={rocratePath}
+            setRocratePath={setRocratePath}
+            onSuccess={handleInitCrateSuccess}
           />
         );
       case "download":

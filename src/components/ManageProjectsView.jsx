@@ -36,7 +36,6 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
 
   const [newProject, setNewProject] = useState(emptyProject);
 
-  // Load projects on component mount
   useEffect(() => {
     loadProjects();
   }, []);
@@ -100,6 +99,9 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
       await saveProjects(updatedProjects);
       setNewProject(emptyProject);
       showNotification("Project added successfully");
+
+      // After successfully adding the project, select it and move to RO-Crate initialization
+      onProjectSelect(projectWithData);
     } catch (error) {
       showNotification(`Failed to add project: ${error.message}`, "error");
     }

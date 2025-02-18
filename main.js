@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs").promises;
 
@@ -49,4 +49,11 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+ipcMain.handle("open-directory-dialog", async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory"],
+  });
+  return result;
 });
