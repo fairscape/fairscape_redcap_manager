@@ -5,6 +5,7 @@ import SidebarComponent from "./components/SideBar";
 import QuestionnaireView from "./components/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
 import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
+import DatasetForm from "./components/dataset/DatasetForm";
 import PreviewValidationView from "./components/PreviewValidationView";
 import InitForm from "./components/InitForm";
 import { AppContainer, MainContent } from "./components/styles";
@@ -29,6 +30,7 @@ export default function App() {
   const [downloadedFilePath, setDownloadedFilePath] = useState(null);
   const [pendingView, setPendingView] = useState(null);
   const [rocratePath, setRocratePath] = useState("");
+  const [roCrateMetadata, setRoCrateMetadata] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
     message: "",
@@ -52,7 +54,8 @@ export default function App() {
       (view === "download" ||
         view === "preview" ||
         view === "deidentify" ||
-        view === "upload")
+        view === "upload" ||
+        view === "dataset-form")
     ) {
       setPendingView(view);
       showNotification("Please select a project first", "warning");
@@ -64,7 +67,6 @@ export default function App() {
 
   const handleProjectSelect = (project, isExisting = false) => {
     setSelectedProject(project);
-    // If it's an existing project, go to download, otherwise go to init-crate
     setCurrentView(isExisting ? "download" : "init-crate");
   };
 
@@ -73,13 +75,28 @@ export default function App() {
     setCurrentView("preview");
   };
 
-  const handleDownloadComplete = (filePath) => {
+  const handleDownloadComplete = async (filePath) => {
     setDownloadedFilePath(filePath);
+    try {
+      const response = await fetch("ro-crate-metadata.json");
+      const metadata = await response.json();
+      setRoCrateMetadata(metadata["@graph"][1]); // Get the main dataset metadata
+      setCurrentView("dataset-form");
+      showNotification(
+        "File downloaded successfully! Please complete the dataset form.",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error reading RO-Crate metadata:", error);
+      showNotification("Error reading metadata. Please try again.", "error");
+    }
+  };
+
+  const handleDatasetSubmit = (formData) => {
+    // Handle the dataset form submission
+    console.log("Dataset form submitted:", formData);
+    showNotification("Dataset registered successfully!", "success");
     setCurrentView("preview");
-    showNotification(
-      "File downloaded successfully! Proceeding to preview.",
-      "success"
-    );
   };
 
   const handleInitCrateSuccess = () => {
@@ -115,10 +132,19 @@ export default function App() {
       case "download":
         return (
           <DownloadSnapshotView
-            setCurrentView={setCurrentView}
             project={selectedProject}
-            onDataSelect={handleDataSelect}
             onDownloadComplete={handleDownloadComplete}
+            setRocratePath={setRocratePath}
+          />
+        );
+      case "dataset-form":
+        return (
+          <DatasetForm
+            downloadedFile={downloadedFilePath}
+            metadata={roCrateMetadata}
+            projectName={selectedProject?.name}
+            onSubmit={handleDatasetSubmit}
+            onBack={() => setCurrentView("download")}
           />
         );
       case "preview":

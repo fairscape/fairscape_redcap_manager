@@ -19,7 +19,7 @@ import {
   ModalContainer,
   FormActions,
   InitFormContainer,
-} from "./InitStyles";
+} from "./FormStyles";
 
 const LICENSE_OPTIONS = [
   { label: "MIT License", value: "https://opensource.org/licenses/MIT" },

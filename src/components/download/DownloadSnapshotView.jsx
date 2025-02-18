@@ -5,7 +5,6 @@ import { exportRecords } from "../../services/redcap-api";
 // Components
 import { FormCard } from "./components/FormCard";
 import { DateRangeSelector } from "./components/DateRangeSelector";
-import { downloadFile } from "./utils/downloadFile";
 
 // Styled Components
 import {
@@ -23,7 +22,11 @@ import {
 
 import { Title } from "../styles";
 
-const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
+const DownloadSnapshotView = ({
+  project,
+  onDownloadComplete,
+  setRocratePath,
+}) => {
   const [projectData, setProjectData] = useState([]);
   const [projectName, setProjectName] = useState("");
   const [expandedForms, setExpandedForms] = useState(new Set());
@@ -104,6 +107,40 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     setSelectedFields(newSelectedFields);
   };
 
+  const downloadFile = async (data, filename, onDownloadComplete) => {
+    // Create blob and trigger browser download
+    const blob = new Blob([data], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url); // Clean up the URL object
+
+    try {
+      // Check if fs is available before attempting to write
+      if (typeof window.fs?.writeFile === "function") {
+        const fileData = new Uint8Array(
+          data.split("").map((char) => char.charCodeAt(0))
+        );
+        await window.fs.writeFile(filename, fileData);
+        onDownloadComplete?.(filename);
+      } else {
+        // If fs is not available, still call onDownloadComplete
+        onDownloadComplete?.(filename);
+        console.warn(
+          "window.fs.writeFile not available - file was downloaded but not saved to filesystem"
+        );
+      }
+    } catch (error) {
+      console.error("Error saving file:", error);
+      // Still call onDownloadComplete since the browser download succeeded
+      onDownloadComplete?.(filename);
+    }
+  };
+
   const selectAllForms = () => {
     const allForms = new Set(projectData.map((form) => form.form_name));
     const allFields = new Set();
@@ -147,7 +184,11 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
           : "";
       const filename = `${projectName}_export${dateRangeStr}_${timestamp}.csv`;
 
-      downloadFile(data, filename, onDownloadComplete);
+      // Pass the filename along with the data to downloadFile
+      downloadFile(data, filename, (filePath) => {
+        setRocratePath(filePath);
+        onDownloadComplete(filePath);
+      });
     } catch (error) {
       console.error("Download failed:", error);
     } finally {
