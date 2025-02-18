@@ -5,7 +5,9 @@ import {
   RefreshCw,
   Maximize2,
   Minimize2,
+  Upload,
 } from "lucide-react";
+import Papa from "papaparse";
 import {
   ContentWrapper,
   FormCard,
@@ -84,74 +86,93 @@ const DataContent = styled(FormTableContainer)`
   border-bottom-right-radius: 0.5rem;
 `;
 
-const PreviewValidationView = () => {
+const FileUploadContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 2px dashed #ccc;
+  border-radius: 0.5rem;
+  margin: 1rem;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #666;
+  }
+`;
+
+const HiddenInput = styled.input`
+  display: none;
+`;
+
+const ErrorContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #dc2626;
+  gap: 0.5rem;
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 0.5rem;
+`;
+
+const PreviewValidationView = ({
+  downloadedFilePath,
+  setDownloadedFilePath,
+  onValidated,
+}) => {
   const [previewData, setPreviewData] = useState([]);
   const [metadata, setMetadata] = useState(null);
   const [expandedPanel, setExpandedPanel] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const fileInputRef = React.useRef(null);
 
   useEffect(() => {
-    // Generate fake preview data
-    const generatePreviewData = () => {
-      const forms = ["demographics", "vitals", "lab_results"];
-      const fields = {
-        demographics: ["age", "gender", "ethnicity"],
-        vitals: ["height", "weight", "blood_pressure"],
-        lab_results: ["glucose", "cholesterol", "hemoglobin"],
-      };
-
-      const rows = [];
-      for (let i = 1; i <= 5; i++) {
-        const row = {
-          record_id: `SUBJ_${String(i).padStart(3, "0")}`,
-          redcap_event_name: "baseline_arm_1",
-          redcap_repeat_instrument: "",
-          redcap_repeat_instance: "",
-        };
-
-        forms.forEach((form) => {
-          fields[form].forEach((field) => {
-            let value = "";
-            switch (field) {
-              case "age":
-                value = Math.floor(Math.random() * 50) + 20;
-                break;
-              case "gender":
-                value = Math.random() > 0.5 ? "M" : "F";
-                break;
-              case "ethnicity":
-                value = ["Hispanic", "Non-Hispanic"][
-                  Math.floor(Math.random() * 2)
-                ];
-                break;
-              case "height":
-                value = (Math.random() * 30 + 150).toFixed(1);
-                break;
-              case "weight":
-                value = (Math.random() * 50 + 50).toFixed(1);
-                break;
-              case "blood_pressure":
-                value = `${Math.floor(Math.random() * 40 + 100)}/${Math.floor(
-                  Math.random() * 20 + 60
-                )}`;
-                break;
-              case "glucose":
-                value = (Math.random() * 100 + 70).toFixed(1);
-                break;
-              case "cholesterol":
-                value = (Math.random() * 150 + 150).toFixed(1);
-                break;
-              case "hemoglobin":
-                value = (Math.random() * 5 + 12).toFixed(1);
-                break;
-              default:
-                value = `Value ${i}`;
-            }
-            row[`${form}_${field}`] = value;
-          });
-        });
-        rows.push(row);
+    const loadCSVData = async () => {
+      if (!downloadedFilePath) {
+        setIsLoading(false);
+        return;
       }
-      return rows;
+
+      try {
+        setIsLoading(true);
+        setErrorMessage(null);
+
+        const response = await fetch(downloadedFilePath);
+        const text = await response.text();
+
+        Papa.parse(text, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            if (results.errors.length > 0) {
+              setErrorMessage("Error parsing CSV file");
+              console.error("Parse errors:", results.errors);
+            } else {
+              setPreviewData(results.data);
+            }
+            setIsLoading(false);
+          },
+          error: (error) => {
+            console.error("Error parsing CSV:", error);
+            setErrorMessage("Error parsing CSV file");
+            setIsLoading(false);
+          },
+        });
+      } catch (error) {
+        console.error("Error reading file:", error);
+        setErrorMessage("Error reading file");
+        setIsLoading(false);
+      }
     };
 
     const generateMetadata = () => ({
@@ -188,58 +209,51 @@ const PreviewValidationView = () => {
                 },
               ],
             },
-            {
-              "@type": "Dataset",
-              "@id": "#vitals",
-              name: "Vital Signs",
-              fields: [
-                {
-                  name: "height",
-                  type: "number",
-                  units: "cm",
-                },
-                {
-                  name: "weight",
-                  type: "number",
-                  units: "kg",
-                },
-                {
-                  name: "blood_pressure",
-                  type: "text",
-                  format: "systolic/diastolic",
-                },
-              ],
-            },
-            {
-              "@type": "Dataset",
-              "@id": "#lab_results",
-              name: "Laboratory Results",
-              fields: [
-                {
-                  name: "glucose",
-                  type: "number",
-                  units: "mg/dL",
-                },
-                {
-                  name: "cholesterol",
-                  type: "number",
-                  units: "mg/dL",
-                },
-                {
-                  name: "hemoglobin",
-                  type: "number",
-                  units: "g/dL",
-                },
-              ],
-            },
           ],
         },
       ],
     });
 
-    setPreviewData(generatePreviewData());
+    loadCSVData();
     setMetadata(generateMetadata());
-  }, []);
+  }, [downloadedFilePath]);
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target.result;
+        Papa.parse(content, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            if (results.errors.length > 0) {
+              setErrorMessage("Error parsing CSV file");
+              console.error("Parse errors:", results.errors);
+            } else {
+              setPreviewData(results.data);
+              const blob = new Blob([content], { type: "text/csv" });
+              const fileUrl = URL.createObjectURL(blob);
+              setDownloadedFilePath(fileUrl);
+            }
+            setIsLoading(false);
+          },
+          error: (error) => {
+            console.error("Error parsing CSV:", error);
+            setErrorMessage("Error parsing CSV file");
+            setIsLoading(false);
+          },
+        });
+      };
+      reader.onerror = () => {
+        setErrorMessage("Error reading file");
+        setIsLoading(false);
+      };
+      reader.readAsText(file);
+    }
+  };
 
   const togglePanel = (panel) => {
     if (expandedPanel === panel) {
@@ -273,32 +287,60 @@ const PreviewValidationView = () => {
               </ExpandButton>
             </FormHeader>
             <DataContent>
-              <FormTable>
-                <FormTableHead>
-                  <tr>
-                    {previewData.length > 0 &&
-                      Object.keys(previewData[0]).map((header) => (
-                        <FormTableHeader key={header}>
-                          {header.replace(/_/g, " ")}
-                        </FormTableHeader>
-                      ))}
-                  </tr>
-                </FormTableHead>
-                <FormTableBody>
-                  {previewData.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {Object.values(row).map((value, cellIndex) => (
-                        <FormTableCell
-                          key={cellIndex}
-                          $primary={cellIndex === 0}
-                        >
-                          {value}
-                        </FormTableCell>
-                      ))}
+              {isLoading ? (
+                <LoadingContainer>
+                  <RefreshCw className="animate-spin" size={20} />
+                  Loading data...
+                </LoadingContainer>
+              ) : errorMessage ? (
+                <ErrorContainer>
+                  <AlertTriangle size={20} />
+                  {errorMessage}
+                </ErrorContainer>
+              ) : !downloadedFilePath ? (
+                <FileUploadContainer
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={32} className="mb-4" />
+                  <p>
+                    No file selected. Click to upload a CSV file or download one
+                    from the previous step.
+                  </p>
+                  <HiddenInput
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                  />
+                </FileUploadContainer>
+              ) : (
+                <FormTable>
+                  <FormTableHead>
+                    <tr>
+                      {previewData.length > 0 &&
+                        Object.keys(previewData[0]).map((header) => (
+                          <FormTableHeader key={header}>
+                            {header.replace(/_/g, " ")}
+                          </FormTableHeader>
+                        ))}
                     </tr>
-                  ))}
-                </FormTableBody>
-              </FormTable>
+                  </FormTableHead>
+                  <FormTableBody>
+                    {previewData.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {Object.values(row).map((value, cellIndex) => (
+                          <FormTableCell
+                            key={cellIndex}
+                            $primary={cellIndex === 0}
+                          >
+                            {value}
+                          </FormTableCell>
+                        ))}
+                      </tr>
+                    ))}
+                  </FormTableBody>
+                </FormTable>
+              )}
             </DataContent>
           </DataCard>
         </SplitViewPanel>
@@ -332,8 +374,9 @@ const PreviewValidationView = () => {
 
       <div className="mt-4 mb-4 flex justify-end">
         <ActionButton
-          onClick={() => console.log("Navigate to de-identification")}
+          onClick={onValidated}
           className="flex items-center gap-2"
+          disabled={!downloadedFilePath || isLoading || errorMessage}
         >
           Proceed to De-identification
           <svg

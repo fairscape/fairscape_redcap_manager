@@ -20,6 +20,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState("questionnaire");
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedData, setSelectedData] = useState(null);
+  const [downloadedFilePath, setDownloadedFilePath] = useState(null);
   const [pendingView, setPendingView] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
@@ -59,6 +60,15 @@ export default function App() {
     setCurrentView("preview");
   };
 
+  const handleDownloadComplete = (filePath) => {
+    setDownloadedFilePath(filePath);
+    setCurrentView("preview");
+    showNotification(
+      "File downloaded successfully! Proceeding to preview.",
+      "success"
+    );
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case "questionnaire":
@@ -89,6 +99,7 @@ export default function App() {
             setCurrentView={setCurrentView}
             project={selectedProject}
             onDataSelect={handleDataSelect}
+            onDownloadComplete={handleDownloadComplete}
           />
         );
       case "preview":
@@ -96,7 +107,9 @@ export default function App() {
           <PreviewValidationView
             project={selectedProject}
             selectedData={selectedData}
+            downloadedFilePath={downloadedFilePath}
             onValidated={() => setCurrentView("deidentify")}
+            setDownloadedFilePath={setDownloadedFilePath}
           />
         );
       case "deidentify":

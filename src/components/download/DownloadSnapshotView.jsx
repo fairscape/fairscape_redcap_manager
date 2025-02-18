@@ -34,7 +34,7 @@ import {
   Title,
 } from "../styles";
 
-const DownloadSnapshotView = ({ project }) => {
+const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [projectData, setProjectData] = useState([]);
   const [projectName, setProjectName] = useState("");
   const [expandedForms, setExpandedForms] = useState(new Set());
@@ -51,7 +51,6 @@ const DownloadSnapshotView = ({ project }) => {
     }
   }, [project]);
 
-  // Keeping existing toggle and selection functions...
   const toggleForm = (formName) => {
     const newExpanded = new Set(expandedForms);
     if (newExpanded.has(formName)) {
@@ -86,6 +85,36 @@ const DownloadSnapshotView = ({ project }) => {
     setSelectedForms(newSelectedForms);
   };
 
+  const toggleFieldSelection = (formName, fieldName) => {
+    const newSelectedFields = new Set(selectedFields);
+    const fieldKey = `${formName}.${fieldName}`;
+
+    if (newSelectedFields.has(fieldKey)) {
+      newSelectedFields.delete(fieldKey);
+      // If no fields from this form are selected, unselect the form
+      const formFields = projectData
+        .find((form) => form.form_name === formName)
+        .fields.map((field) => `${formName}.${field.field_name}`);
+      const hasSelectedFields = formFields.some((field) =>
+        newSelectedFields.has(field)
+      );
+      if (!hasSelectedFields) {
+        const newSelectedForms = new Set(selectedForms);
+        newSelectedForms.delete(formName);
+        setSelectedForms(newSelectedForms);
+      }
+    } else {
+      newSelectedFields.add(fieldKey);
+      // If this is the first field selected from this form, select the form
+      if (!selectedForms.has(formName)) {
+        const newSelectedForms = new Set(selectedForms);
+        newSelectedForms.add(formName);
+        setSelectedForms(newSelectedForms);
+      }
+    }
+    setSelectedFields(newSelectedFields);
+  };
+
   const selectAllForms = () => {
     const allForms = new Set(projectData.map((form) => form.form_name));
     const allFields = new Set();
@@ -107,6 +136,20 @@ const DownloadSnapshotView = ({ project }) => {
     document.body.appendChild(link);
     link.click();
     link.parentNode.removeChild(link);
+
+    // Store the downloaded file in the filesystem
+    const fileData = new Uint8Array(
+      data.split("").map((char) => char.charCodeAt(0))
+    );
+    window.fs
+      .writeFile(filename, fileData)
+      .then(() => {
+        // Call the callback with the file path
+        onDownloadComplete(filename);
+      })
+      .catch((error) => {
+        console.error("Error saving file:", error);
+      });
   };
 
   const handleDownload = async () => {
