@@ -12,6 +12,10 @@ const sidebarItems = [
     action: "add-project",
   },
   {
+    text: "RO-Crate Initialization",
+    action: "init-crate",
+  },
+  {
     text: "View/Export Project Data",
     action: "download",
   },

@@ -8,14 +8,17 @@ import {
   FormHeader,
   FormTitle,
   FormTableContainer,
-  ActionButton,
   TableContainer,
   Table,
   TableBody,
   TableRow,
   TableCell,
+  ActionButton,
+  BrowseButton,
   NotificationBox,
-} from "./styles";
+  ModalContainer,
+  FormActions,
+} from "./InitStyles";
 
 const LICENSE_OPTIONS = [
   { label: "MIT License", value: "https://opensource.org/licenses/MIT" },
@@ -146,7 +149,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
         (proj) => proj.name === formData.project_name
       );
 
-      const result = await rocrate_create(
+      await rocrate_create(
         rocratePath,
         formData.name,
         organization?.guid || null,
@@ -158,6 +161,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
         guid,
         formData.license
       );
+
       setNotification({
         message: "RO-Crate created successfully!",
         severity: "success",
@@ -186,26 +190,28 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
   return (
     <>
       <FormCard>
-        <FormHeader as="div">
+        <FormHeader>
           <FormTitle>Initialize Pipeline RO-Crate</FormTitle>
         </FormHeader>
-        <FormTableContainer>
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
+          <FormTableContainer>
             <TableContainer>
               <Table>
                 <TableBody>
                   <TableRow>
                     <TableCell>RO-Crate Path</TableCell>
                     <TableCell>
-                      <input
-                        type="text"
-                        value={rocratePath}
-                        onChange={(e) => setRocratePath(e.target.value)}
-                        required
-                      />
-                      <ActionButton type="button" onClick={handleBrowse}>
-                        Browse
-                      </ActionButton>
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={rocratePath}
+                          onChange={(e) => setRocratePath(e.target.value)}
+                          required
+                        />
+                        <BrowseButton type="button" onClick={handleBrowse}>
+                          Browse
+                        </BrowseButton>
+                      </div>
                     </TableCell>
                   </TableRow>
                   <TableRow>
@@ -313,44 +319,46 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
                 </TableBody>
               </Table>
             </TableContainer>
-            <div style={{ padding: "1rem", textAlign: "right" }}>
-              <ActionButton type="submit">Initialize RO-Crate</ActionButton>
-            </div>
-          </form>
-        </FormTableContainer>
+          </FormTableContainer>
+          <FormActions>
+            <ActionButton type="submit">Initialize RO-Crate</ActionButton>
+          </FormActions>
+        </form>
       </FormCard>
 
-      <Modal
-        show={showOverwriteConfirmation}
-        onHide={() => setShowOverwriteConfirmation(false)}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Existing RO-Crate Metadata Found</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          An ro-crate-metadata.json file already exists in the selected
-          directory. Do you want to overwrite it or continue to the registration
-          page?
-        </Modal.Body>
-        <Modal.Footer>
-          <ActionButton
-            onClick={() => {
-              setShowOverwriteConfirmation(false);
-              onSuccess();
-            }}
-          >
-            Continue to Register
-          </ActionButton>
-          <ActionButton
-            onClick={() => {
-              setShowOverwriteConfirmation(false);
-              createROCrate();
-            }}
-          >
-            Overwrite
-          </ActionButton>
-        </Modal.Footer>
-      </Modal>
+      <ModalContainer>
+        <Modal
+          show={showOverwriteConfirmation}
+          onHide={() => setShowOverwriteConfirmation(false)}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Existing RO-Crate Metadata Found</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            An ro-crate-metadata.json file already exists in the selected
+            directory. Do you want to overwrite it or continue to the
+            registration page?
+          </Modal.Body>
+          <Modal.Footer>
+            <ActionButton
+              onClick={() => {
+                setShowOverwriteConfirmation(false);
+                onSuccess();
+              }}
+            >
+              Continue to Register
+            </ActionButton>
+            <ActionButton
+              onClick={() => {
+                setShowOverwriteConfirmation(false);
+                createROCrate();
+              }}
+            >
+              Overwrite
+            </ActionButton>
+          </Modal.Footer>
+        </Modal>
+      </ModalContainer>
 
       {notification && (
         <NotificationBox severity={notification.severity}>
