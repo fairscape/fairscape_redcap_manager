@@ -62,6 +62,12 @@ export default function App() {
     }
   };
 
+  const handleProjectSelect = (project, isExisting = false) => {
+    setSelectedProject(project);
+    // If it's an existing project, go to download, otherwise go to init-crate
+    setCurrentView(isExisting ? "download" : "init-crate");
+  };
+
   const handleDataSelect = (data) => {
     setSelectedData(data);
     setCurrentView("preview");
@@ -94,10 +100,7 @@ export default function App() {
         return (
           <ManageProjectsView
             setCurrentView={setCurrentView}
-            onProjectSelect={(project) => {
-              setSelectedProject(project);
-              setCurrentView("init-crate");
-            }}
+            onProjectSelect={handleProjectSelect}
           />
         );
       case "init-crate":

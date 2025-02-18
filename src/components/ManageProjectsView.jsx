@@ -100,8 +100,8 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
       setNewProject(emptyProject);
       showNotification("Project added successfully");
 
-      // After successfully adding the project, select it and move to RO-Crate initialization
-      onProjectSelect(projectWithData);
+      // For new projects, go to init-crate
+      onProjectSelect(projectWithData, false);
     } catch (error) {
       showNotification(`Failed to add project: ${error.message}`, "error");
     }
@@ -136,7 +136,8 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
   };
 
   const selectProject = (project) => {
-    onProjectSelect(project);
+    // For existing projects, go directly to download
+    onProjectSelect(project, true);
   };
 
   return (
