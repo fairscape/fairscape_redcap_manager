@@ -18,6 +18,7 @@ import {
   NotificationBox,
   ModalContainer,
   FormActions,
+  InitFormContainer,
 } from "./InitStyles";
 
 const LICENSE_OPTIONS = [
@@ -188,7 +189,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
   };
 
   return (
-    <>
+    <InitFormContainer>
       <FormCard>
         <FormHeader>
           <FormTitle>Initialize Pipeline RO-Crate</FormTitle>
@@ -365,7 +366,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
           {notification.message}
         </NotificationBox>
       )}
-    </>
+    </InitFormContainer>
   );
 }
 

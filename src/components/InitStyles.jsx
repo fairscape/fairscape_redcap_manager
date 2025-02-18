@@ -1,13 +1,22 @@
 import styled from "styled-components";
 
+export const InitFormContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 75px);
+  position: relative;
+  margin-bottom: 2rem;
+`;
+
 export const FormCard = styled.div`
+  flex: 1;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow-y: auto;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  margin-bottom: 1.5rem;
-  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
 `;
 
 export const FormHeader = styled.div`
@@ -32,8 +41,7 @@ export const FormTitle = styled.h3`
 `;
 
 export const FormTableContainer = styled.div`
-  border-top: 1px solid #e5e7eb;
-  max-height: 24rem;
+  flex: 1;
   overflow-y: auto;
   width: 100%;
 `;
@@ -55,7 +63,6 @@ export const TableBody = styled.tbody`
   tr:nth-of-type(odd) {
     background-color: rgba(0, 0, 0, 0.02);
   }
-
   tr:hover {
     background-color: rgba(0, 0, 0, 0.05);
   }
@@ -76,7 +83,6 @@ export const TableCell = styled.td`
     border-radius: 4px;
     background: white;
     color: #333;
-
     &:focus {
       outline: none;
       border-color: #007bff;
@@ -84,7 +90,7 @@ export const TableCell = styled.td`
   }
 
   textarea {
-    min-height: 100px;
+    min-height: 50px;
     resize: vertical;
   }
 
@@ -153,7 +159,6 @@ export const FormActions = styled.div`
   }
 `;
 
-// Modal styles
 export const ModalContainer = styled.div`
   .modal-content {
     background: white;
@@ -175,7 +180,6 @@ export const ModalContainer = styled.div`
 
     .btn-close {
       opacity: 0.5;
-
       &:hover {
         opacity: 0.75;
       }

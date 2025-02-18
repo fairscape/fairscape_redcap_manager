@@ -15,10 +15,9 @@ export const MainContent = styled.div`
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* This is important for nested flex containers */
+  background: white;
 `;
+
 export const Sidebar = styled.div`
   width: 250px;
   min-width: 250px;

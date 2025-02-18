@@ -30,7 +30,7 @@ const SplitViewContainer = styled.div`
   display: flex;
   gap: 2rem;
   margin-top: 1.5rem;
-  height: calc(100vh - 300px);
+  height: calc(100vh - 200px);
   position: relative;
   margin-bottom: 2rem;
 `;
