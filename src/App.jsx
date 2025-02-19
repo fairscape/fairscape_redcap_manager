@@ -47,9 +47,11 @@ export default function App() {
     }, 6000);
   };
 
-  const handleViewChange = (view) => {
+  const handleViewChange = (view, projectOverride = null) => {
+    const projectToUse = projectOverride || selectedProject;
+
     if (
-      !selectedProject &&
+      !projectToUse &&
       (view === "download" ||
         view === "preview" ||
         view === "deidentify" ||
@@ -61,17 +63,24 @@ export default function App() {
       setCurrentView("add-project");
     } else {
       setCurrentView(view);
+      if (projectOverride) {
+        setSelectedProject(projectOverride);
+      }
     }
   };
 
   const handleProjectSelect = (project, isExisting = false) => {
     setSelectedProject(project);
-    setCurrentView(isExisting ? "download" : "init-crate");
+    if (isExisting) {
+      handleViewChange("download", project);
+    } else {
+      handleViewChange("init-crate", project);
+    }
   };
 
   const handleDataSelect = (data) => {
     setSelectedData(data);
-    setCurrentView("preview");
+    handleViewChange("preview");
   };
 
   const handleDownloadComplete = async (filePath) => {
@@ -80,7 +89,7 @@ export default function App() {
       const response = await fetch("ro-crate-metadata.json");
       const metadata = await response.json();
       setRoCrateMetadata(metadata["@graph"][1]); // Get the main dataset metadata
-      setCurrentView("dataset-form");
+      handleViewChange("dataset-form");
       showNotification(
         "File downloaded successfully! Please complete the dataset form.",
         "success"
@@ -94,13 +103,13 @@ export default function App() {
   const handleDatasetSubmit = (formData) => {
     console.log("Dataset form submitted:", formData);
     showNotification("Dataset registered successfully!", "success");
-    setCurrentView("preview");
+    handleViewChange("preview");
   };
 
   const handleInitCrateSuccess = (updatedProject) => {
     setSelectedProject(updatedProject);
     showNotification("RO-Crate initialized successfully!", "success");
-    setCurrentView("download");
+    handleViewChange("download", updatedProject);
   };
 
   const updateProject = async (updatedProject) => {
@@ -146,7 +155,7 @@ export default function App() {
             metadata={roCrateMetadata}
             projectName={selectedProject?.name}
             onSubmit={handleDatasetSubmit}
-            onBack={() => setCurrentView("download")}
+            onBack={() => handleViewChange("download")}
           />
         );
       case "preview":
@@ -155,7 +164,7 @@ export default function App() {
             project={selectedProject}
             selectedData={selectedData}
             downloadedFilePath={downloadedFilePath}
-            onValidated={() => setCurrentView("deidentify")}
+            onValidated={() => handleViewChange("deidentify")}
             setDownloadedFilePath={setDownloadedFilePath}
           />
         );

@@ -177,25 +177,20 @@ function InitForm({ onSuccess, selectedProject, updateProject }) {
       );
 
       try {
-        // Use ipcRenderer to read the metadata file
         const metadataContent = await ipcRenderer.invoke("read-file", {
           path: `${formData.cratePath}/ro-crate-metadata.json`,
           encoding: "utf8",
         });
 
         const metadata = JSON.parse(metadataContent);
+        const updatedProject = {
+          ...selectedProject,
+          rocratePath: formData.cratePath,
+          rocrateMetadata: metadata["@graph"][1],
+        };
 
         if (selectedProject && updateProject) {
-          const updatedProject = {
-            ...selectedProject,
-            rocratePath: formData.cratePath,
-            rocrateMetadata: metadata["@graph"][1],
-          };
-
-          // Save the updated project using ipcRenderer
           await ipcRenderer.invoke("save-project", updatedProject);
-
-          // Update the project in the parent component
           await updateProject(updatedProject);
         }
 
@@ -203,7 +198,8 @@ function InitForm({ onSuccess, selectedProject, updateProject }) {
           message: "RO-Crate created successfully!",
           severity: "success",
         });
-        onSuccess();
+
+        onSuccess(updatedProject);
       } catch (error) {
         console.error("Error reading RO-Crate metadata:", error);
         setNotification({
