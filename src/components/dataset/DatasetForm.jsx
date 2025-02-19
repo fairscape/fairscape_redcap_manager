@@ -22,6 +22,7 @@ const initialFormState = {
   description: "",
   keywords: "",
   dataFormat: "CSV",
+  schema: null, 
 };
 
 const DatasetForm = ({
@@ -30,6 +31,7 @@ const DatasetForm = ({
   projectName,
   onSubmit,
   onBack,
+  schemaID,
 }) => {
   const [formData, setFormData] = useState(initialFormState);
 
@@ -49,6 +51,7 @@ const DatasetForm = ({
           ? metadata.keywords.join(", ")
           : metadata.keywords || "",
         dataFormat: "CSV",
+        schema: schemaID || null, // Include schema ID from props
       }));
     } else {
       // Set defaults if no metadata
@@ -57,9 +60,10 @@ const DatasetForm = ({
         name: `REDCap export of: ${projectName}`,
         datePublished: new Date().toISOString().split("T")[0],
         dataFormat: "CSV",
+        schema: schemaID || null, // Include schema ID from props
       }));
     }
-  }, [metadata, projectName]);
+  }, [metadata, projectName, schemaID]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,7 +75,11 @@ const DatasetForm = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Pass the complete form data including the schema ID to onSubmit
+    onSubmit({
+      ...formData,
+      schema: schemaID, // Ensure schema ID is included in submission
+    });
   };
 
   return (
@@ -178,6 +186,15 @@ const DatasetForm = ({
                     />
                   </TableCell>
                 </TableRow>
+
+                {schemaID && (
+                  <TableRow>
+                    <TableCell>Schema ID</TableCell>
+                    <TableCell>
+                      <input type="text" value={schemaID} disabled />
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>

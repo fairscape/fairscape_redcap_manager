@@ -28,6 +28,7 @@ export default function App() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedData, setSelectedData] = useState(null);
   const [downloadedFilePath, setDownloadedFilePath] = useState(null);
+  const [downloadedschemaID, setDownloadedschemaID] = useState(null);
   const [pendingView, setPendingView] = useState(null);
   const [roCrateMetadata, setRoCrateMetadata] = useState(null);
   const [notification, setNotification] = useState({
@@ -83,8 +84,12 @@ export default function App() {
     handleViewChange("preview");
   };
 
-  const handleDownloadComplete = async (filePath) => {
+  const handleDownloadComplete = async (filePath, schemaID) => {
     setDownloadedFilePath(filePath);
+    if (schemaID) {
+      setDownloadedschemaID(schemaID);
+    }
+
     if (selectedProject?.rocrateMetadata) {
       setRoCrateMetadata(selectedProject.rocrateMetadata);
       handleViewChange("dataset-form");
@@ -98,6 +103,7 @@ export default function App() {
       handleViewChange("init-crate");
     }
   };
+
   const handleDatasetSubmit = (formData) => {
     showNotification("Dataset registered successfully!", "success");
     handleViewChange("preview");
@@ -150,6 +156,7 @@ export default function App() {
             downloadedFile={downloadedFilePath}
             metadata={roCrateMetadata}
             projectName={selectedProject?.name}
+            schemaID={downloadedschemaID}
             onSubmit={handleDatasetSubmit}
             onBack={() => handleViewChange("download")}
           />

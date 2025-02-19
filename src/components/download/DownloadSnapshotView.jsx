@@ -7,6 +7,10 @@ const { ipcRenderer } = window.require("electron");
 import { FormCard } from "./components/FormCard";
 import { DateRangeSelector } from "./components/DateRangeSelector";
 
+//utils
+import { generateSchemaFromFormData } from "../../services/schema-generation";
+import { register_schema } from "@fairscape/utils";
+
 // Styled Components
 import {
   PageContainer,
@@ -20,7 +24,6 @@ import {
   ModeSelectorContainer,
   ModeButton,
 } from "./download_styles";
-
 import { Title } from "../styles";
 
 const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
@@ -48,7 +51,6 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     }
   }, [project]);
 
-  // Rest of the component code remains the same...
   const toggleForm = (formName) => {
     const newExpanded = new Set(expandedForms);
     if (newExpanded.has(formName)) {
@@ -88,7 +90,6 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
 
     if (newSelectedFields.has(fieldKey)) {
       newSelectedFields.delete(fieldKey);
-      // If no fields from this form are selected, unselect the form
       const formFields =
         projectData
           .find((form) => form.form_name === formName)
@@ -103,7 +104,6 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
       }
     } else {
       newSelectedFields.add(fieldKey);
-      // If this is the first field selected from this form, select the form
       if (!selectedForms.has(formName)) {
         const newSelectedForms = new Set(selectedForms);
         newSelectedForms.add(formName);
@@ -111,6 +111,43 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
       }
     }
     setSelectedFields(newSelectedFields);
+  };
+
+  const createAndRegisterSchema = async () => {
+    // Filter the project data to only include selected forms and fields
+    const filteredFormData = projectData
+      .filter((form) => selectedForms.has(form.form_name))
+      .map((form) => ({
+        ...form,
+        fields: form.fields.filter((field) =>
+          selectedFields.has(`${form.form_name}.${field.field_name}`)
+        ),
+      }));
+
+    // Generate the schema
+    const schema = generateSchemaFromFormData(
+      filteredFormData,
+      `${projectName} Export Schema`,
+      `Schema for selected fields from ${projectName} export`
+    );
+
+    try {
+      // Register the schema with the RO-crate
+      const schemaId = await register_schema(
+        project.rocratePath,
+        schema.name,
+        schema.description,
+        schema.properties,
+        schema.required,
+        schema.separator,
+        schema.header
+      );
+
+      return schemaId;
+    } catch (error) {
+      console.error("Error registering schema with RO-crate:", error);
+      throw new Error(`Failed to register schema: ${error.message}`);
+    }
   };
 
   const generateFilename = () => {
@@ -136,7 +173,6 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
         throw new Error("File save was canceled");
       }
 
-      // Write the file using the selected path
       await ipcRenderer.invoke("save-file", {
         filePath: result.filePath,
         data: data,
@@ -173,7 +209,7 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     setIsLoading(true);
     try {
       const options = {};
-
+      let schemaID = null;
       if (downloadMode === "date") {
         options.dateRangeBegin = dateRange.dateRangeBegin;
         options.dateRangeEnd = dateRange.dateRangeEnd;
@@ -186,12 +222,15 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
             return fieldName;
           });
         }
+        // Create and register schema for selected fields
+        schemaID = await createAndRegisterSchema();
       }
 
       const data = await exportRecords(project.url, project.token, options);
       const filename = generateFilename();
       const filePath = await downloadFile(data, filename);
-      onDownloadComplete(filePath);
+
+      onDownloadComplete(filePath, schemaID);
     } catch (error) {
       console.error("Download failed:", error);
       setError("Failed to download data: " + error.message);
