@@ -108,6 +108,30 @@ ipcMain.handle("read-file", async (_, { path: filePath, encoding }) => {
   }
 });
 
+ipcMain.handle("show-save-dialog", async (_, options) => {
+  try {
+    const result = await dialog.showSaveDialog({
+      defaultPath: options.defaultPath,
+      filters: options.filters,
+      properties: ["createDirectory", "showOverwriteConfirmation"],
+    });
+    return result;
+  } catch (error) {
+    console.error("Error showing save dialog:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("save-file", async (_, { filePath, data }) => {
+  try {
+    await fs.writeFile(filePath, data);
+    return true;
+  } catch (error) {
+    console.error("Error saving file:", error);
+    throw error;
+  }
+});
+
 // App lifecycle events
 app.whenReady().then(createWindow);
 

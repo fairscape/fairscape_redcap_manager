@@ -85,23 +85,20 @@ export default function App() {
 
   const handleDownloadComplete = async (filePath) => {
     setDownloadedFilePath(filePath);
-    try {
-      const response = await fetch("ro-crate-metadata.json");
-      const metadata = await response.json();
-      setRoCrateMetadata(metadata["@graph"][1]); // Get the main dataset metadata
+    if (selectedProject?.rocrateMetadata) {
+      setRoCrateMetadata(selectedProject.rocrateMetadata);
       handleViewChange("dataset-form");
       showNotification(
         "File downloaded successfully! Please complete the dataset form.",
         "success"
       );
-    } catch (error) {
-      console.error("Error reading RO-Crate metadata:", error);
-      showNotification("Error reading metadata. Please try again.", "error");
+    } else {
+      console.error("No RO-Crate metadata found in project");
+      showNotification("Error: Project metadata not found", "error");
+      handleViewChange("init-crate");
     }
   };
-
   const handleDatasetSubmit = (formData) => {
-    console.log("Dataset form submitted:", formData);
     showNotification("Dataset registered successfully!", "success");
     handleViewChange("preview");
   };
@@ -114,7 +111,6 @@ export default function App() {
 
   const updateProject = async (updatedProject) => {
     setSelectedProject(updatedProject);
-    // Here you would also update the project in your project list/storage
   };
 
   const renderContent = () => {

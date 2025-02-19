@@ -39,12 +39,15 @@ const DatasetForm = ({
       setFormData((prev) => ({
         ...prev,
         name: metadata.name || `REDCap export of: ${projectName}`,
-        author: metadata.author?.map((a) => a.name).join(", ") || "",
+        author: metadata.author || "",
         version: metadata.version || "1.0",
         datePublished:
           metadata.datePublished || new Date().toISOString().split("T")[0],
         description: metadata.description || "",
-        keywords: metadata.keywords?.join(", ") || "",
+        // Check if metadata.keywords is an array before joining
+        keywords: Array.isArray(metadata.keywords)
+          ? metadata.keywords.join(", ")
+          : metadata.keywords || "",
         dataFormat: "CSV",
       }));
     } else {
@@ -89,7 +92,7 @@ const DatasetForm = ({
                     <input
                       type="text"
                       name="name"
-                      value={formData.name}
+                      value={`REDCap Export of: ${projectName}`}
                       onChange={handleChange}
                       required
                     />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Download } from "lucide-react";
 import { exportRecords } from "../../services/redcap-api";
+const { ipcRenderer } = window.require("electron");
 
 // Components
 import { FormCard } from "./components/FormCard";
@@ -34,9 +35,7 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    console.log("Project received:", project); // Debug log
     if (project) {
-      console.log("Project formData:", project.formData); // Debug log
       if (!project.formData) {
         setError("No form data available in project");
         return;
@@ -123,17 +122,31 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     return `${projectName}_export${dateRangeStr}_${timestamp}.csv`;
   };
 
-  const downloadFile = async (data, filename) => {
-    const blob = new Blob([data], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    return filename;
+  const downloadFile = async (data, suggestedFilename) => {
+    try {
+      const result = await ipcRenderer.invoke("show-save-dialog", {
+        defaultPath: suggestedFilename,
+        filters: [
+          { name: "CSV Files", extensions: ["csv"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (result.canceled) {
+        throw new Error("File save was canceled");
+      }
+
+      // Write the file using the selected path
+      await ipcRenderer.invoke("save-file", {
+        filePath: result.filePath,
+        data: data,
+      });
+
+      return result.filePath;
+    } catch (error) {
+      console.error("Error saving file:", error);
+      throw error;
+    }
   };
 
   const selectAllForms = () => {
