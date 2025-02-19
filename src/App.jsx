@@ -79,11 +79,6 @@ export default function App() {
     }
   };
 
-  const handleDataSelect = (data) => {
-    setSelectedData(data);
-    handleViewChange("preview");
-  };
-
   const handleDownloadComplete = async (filePath, schemaID) => {
     setDownloadedFilePath(filePath);
     if (schemaID) {
@@ -165,7 +160,6 @@ export default function App() {
         return (
           <PreviewValidationView
             project={selectedProject}
-            selectedData={selectedData}
             downloadedFilePath={downloadedFilePath}
             onValidated={() => handleViewChange("deidentify")}
             setDownloadedFilePath={setDownloadedFilePath}

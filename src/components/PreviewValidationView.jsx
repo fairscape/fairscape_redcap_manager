@@ -7,6 +7,7 @@ import {
   Minimize2,
   Upload,
 } from "lucide-react";
+const { ipcRenderer } = window.require("electron");
 import Papa from "papaparse";
 import {
   ContentWrapper,
@@ -124,6 +125,7 @@ const LoadingContainer = styled.div`
 `;
 
 const PreviewValidationView = ({
+  project,
   downloadedFilePath,
   setDownloadedFilePath,
   onValidated,
@@ -136,6 +138,26 @@ const PreviewValidationView = ({
   const fileInputRef = React.useRef(null);
 
   useEffect(() => {
+    const loadMetadata = async () => {
+      try {
+        if (!project?.rocratePath) {
+          console.warn("No RO-Crate path found in project");
+          return;
+        }
+
+        const metadataPath = `${project.rocratePath}/ro-crate-metadata.json`;
+        const response = await ipcRenderer.invoke("read-file", {
+          path: metadataPath,
+          encoding: "utf8",
+        });
+        const parsedMetadata = JSON.parse(response);
+        setMetadata(parsedMetadata);
+      } catch (error) {
+        console.error("Error loading RO-Crate metadata:", error);
+        setErrorMessage("Error loading metadata");
+      }
+    };
+
     const loadCSVData = async () => {
       if (!downloadedFilePath) {
         setIsLoading(false);
@@ -146,28 +168,23 @@ const PreviewValidationView = ({
         setIsLoading(true);
         setErrorMessage(null);
 
-        const response = await fetch(downloadedFilePath);
-        const text = await response.text();
-
-        Papa.parse(text, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            if (results.errors.length > 0) {
-              setErrorMessage("Error parsing CSV file");
-              console.error("Parse errors:", results.errors);
-            } else {
-              setPreviewData(results.data);
-            }
-            setIsLoading(false);
-          },
-          error: (error) => {
-            console.error("Error parsing CSV:", error);
-            setErrorMessage("Error parsing CSV file");
-            setIsLoading(false);
-          },
-        });
+        // Check if the path is a URL (from file upload) or a file path
+        if (
+          downloadedFilePath.startsWith("blob:") ||
+          downloadedFilePath.startsWith("data:")
+        ) {
+          // For uploaded files, fetch the blob URL
+          const response = await fetch(downloadedFilePath);
+          const text = await response.text();
+          parseCSVContent(text);
+        } else {
+          // For file paths, use ipcRenderer
+          const response = await ipcRenderer.invoke("read-file", {
+            path: downloadedFilePath,
+            encoding: "utf8",
+          });
+          parseCSVContent(response);
+        }
       } catch (error) {
         console.error("Error reading file:", error);
         setErrorMessage("Error reading file");
@@ -175,48 +192,32 @@ const PreviewValidationView = ({
       }
     };
 
-    const generateMetadata = () => ({
-      "@context": "https://w3id.org/ro/crate/1.1/context",
-      "@graph": [
-        {
-          "@type": "Dataset",
-          "@id": "./",
-          name: "Clinical Trial XYZ-123",
-          datePublished: new Date().toISOString(),
-          description: "Clinical trial data export from REDCap",
-          hasPart: [
-            {
-              "@type": "Dataset",
-              "@id": "#demographics",
-              name: "Demographics Form",
-              fields: [
-                {
-                  name: "age",
-                  type: "number",
-                  required: true,
-                  validation: "integer, >18",
-                },
-                {
-                  name: "gender",
-                  type: "radio",
-                  required: true,
-                  choices: "M,Male | F,Female",
-                },
-                {
-                  name: "ethnicity",
-                  type: "dropdown",
-                  required: true,
-                },
-              ],
-            },
-          ],
+    // Separate the parsing logic into its own function since we use it in both cases
+    const parseCSVContent = (content) => {
+      Papa.parse(content, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.errors.length > 0) {
+            setErrorMessage("Error parsing CSV file");
+            console.error("Parse errors:", results.errors);
+          } else {
+            setPreviewData(results.data);
+          }
+          setIsLoading(false);
         },
-      ],
-    });
+        error: (error) => {
+          console.error("Error parsing CSV:", error);
+          setErrorMessage("Error parsing CSV file");
+          setIsLoading(false);
+        },
+      });
+    };
 
     loadCSVData();
-    setMetadata(generateMetadata());
-  }, [downloadedFilePath]);
+    loadMetadata();
+  }, [downloadedFilePath, project]);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -247,20 +248,12 @@ const PreviewValidationView = ({
           },
         });
       };
-      reader.onerror = () => {
-        setErrorMessage("Error reading file");
-        setIsLoading(false);
-      };
       reader.readAsText(file);
     }
   };
 
   const togglePanel = (panel) => {
-    if (expandedPanel === panel) {
-      setExpandedPanel(null);
-    } else {
-      setExpandedPanel(panel);
-    }
+    setExpandedPanel(expandedPanel === panel ? null : panel);
   };
 
   return (
