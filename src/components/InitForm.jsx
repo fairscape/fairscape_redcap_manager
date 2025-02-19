@@ -64,7 +64,7 @@ const projects = [
   { name: "PreMo", guid: "ark:59852/project-premo" },
 ];
 
-function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
+function InitForm({ onSuccess, selectedProject, updateProject }) {
   const [formData, setFormData] = useState({
     name: "",
     organization_name: "",
@@ -73,6 +73,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
     author: "",
     license: LICENSE_OPTIONS[0].value,
     keywords: "",
+    cratePath: "",
   });
 
   const [showOverwriteConfirmation, setShowOverwriteConfirmation] =
@@ -121,8 +122,11 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
 
   const checkForExistingMetadata = async () => {
     try {
-      const fileList = await window.fs.readdir(rocratePath);
-      return fileList.includes("ro-crate-metadata.json");
+      // Use ipcRenderer to check for existing metadata file
+      const result = await ipcRenderer.invoke("check-file-exists", {
+        path: `${formData.cratePath}/ro-crate-metadata.json`,
+      });
+      return result;
     } catch (error) {
       console.error("Failed to check for existing metadata:", error);
       return false;
@@ -131,12 +135,21 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.cratePath) {
+      setNotification({
+        message: "Please select a directory for the RO-Crate",
+        severity: "error",
+      });
+      return;
+    }
+
     const metadataExists = await checkForExistingMetadata();
 
     if (metadataExists) {
       setShowOverwriteConfirmation(true);
     } else {
-      createROCrate();
+      await createROCrate();
     }
   };
 
@@ -151,7 +164,7 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
       );
 
       await rocrate_create(
-        rocratePath,
+        formData.cratePath,
         formData.name,
         organization?.guid || null,
         project?.guid || null,
@@ -163,11 +176,41 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
         formData.license
       );
 
-      setNotification({
-        message: "RO-Crate created successfully!",
-        severity: "success",
-      });
-      onSuccess();
+      try {
+        // Use ipcRenderer to read the metadata file
+        const metadataContent = await ipcRenderer.invoke("read-file", {
+          path: `${formData.cratePath}/ro-crate-metadata.json`,
+          encoding: "utf8",
+        });
+
+        const metadata = JSON.parse(metadataContent);
+
+        if (selectedProject && updateProject) {
+          const updatedProject = {
+            ...selectedProject,
+            rocratePath: formData.cratePath,
+            rocrateMetadata: metadata["@graph"][1],
+          };
+
+          // Save the updated project using ipcRenderer
+          await ipcRenderer.invoke("save-project", updatedProject);
+
+          // Update the project in the parent component
+          await updateProject(updatedProject);
+        }
+
+        setNotification({
+          message: "RO-Crate created successfully!",
+          severity: "success",
+        });
+        onSuccess();
+      } catch (error) {
+        console.error("Error reading RO-Crate metadata:", error);
+        setNotification({
+          message: "RO-Crate created but metadata could not be read",
+          severity: "warning",
+        });
+      }
     } catch (error) {
       setNotification({
         message: "Failed to create RO-Crate",
@@ -181,10 +224,17 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
     try {
       const result = await ipcRenderer.invoke("open-directory-dialog");
       if (result.filePaths && result.filePaths.length > 0) {
-        setRocratePath(result.filePaths[0]);
+        setFormData((prev) => ({
+          ...prev,
+          cratePath: result.filePaths[0],
+        }));
       }
     } catch (error) {
       console.error("Failed to open directory dialog:", error);
+      setNotification({
+        message: "Failed to open directory dialog",
+        severity: "error",
+      });
     }
   };
 
@@ -205,8 +255,9 @@ function InitForm({ rocratePath, setRocratePath, onSuccess, selectedProject }) {
                       <div style={{ display: "flex", alignItems: "center" }}>
                         <input
                           type="text"
-                          value={rocratePath}
-                          onChange={(e) => setRocratePath(e.target.value)}
+                          name="cratePath"
+                          value={formData.cratePath}
+                          onChange={handleChange}
                           required
                         />
                         <BrowseButton type="button" onClick={handleBrowse}>

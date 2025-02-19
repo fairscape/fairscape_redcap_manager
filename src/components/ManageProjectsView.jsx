@@ -32,6 +32,8 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
     url: "",
     token: "",
     formData: null,
+    rocratePath: "", // Added for RO-Crate integration
+    rocrateMetadata: null, // Added for RO-Crate integration
   };
 
   const [newProject, setNewProject] = useState(emptyProject);
@@ -93,6 +95,8 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
         ...newProject,
         id: projectId,
         formData: formData,
+        rocratePath: "", // Initialize empty
+        rocrateMetadata: null, // Initialize empty
       };
 
       const updatedProjects = [...projects, projectWithData];
@@ -109,11 +113,21 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
 
   const handleUpdate = async (projectId, updatedProject) => {
     try {
+      // Preserve existing RO-Crate data if not modified in edit
+      const existingProject = projects.find((p) => p.id === projectId);
+      const projectToUpdate = {
+        ...updatedProject,
+        rocratePath: updatedProject.rocratePath || existingProject.rocratePath,
+        rocrateMetadata:
+          updatedProject.rocrateMetadata || existingProject.rocrateMetadata,
+      };
+
       const updatedProjects = projects.map((project) =>
         project.id === projectId
-          ? { ...updatedProject, id: projectId }
+          ? { ...projectToUpdate, id: projectId }
           : project
       );
+
       await saveProjects(updatedProjects);
       setEditingId(null);
       setEditProject(null);
@@ -136,8 +150,9 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
   };
 
   const selectProject = (project) => {
-    // For existing projects, go directly to download
-    onProjectSelect(project, true);
+    // If project has RO-Crate path, go to download, otherwise init-crate
+    const isExisting = Boolean(project.rocratePath);
+    onProjectSelect(project, isExisting);
   };
 
   return (

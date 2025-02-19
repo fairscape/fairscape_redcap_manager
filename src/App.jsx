@@ -29,7 +29,6 @@ export default function App() {
   const [selectedData, setSelectedData] = useState(null);
   const [downloadedFilePath, setDownloadedFilePath] = useState(null);
   const [pendingView, setPendingView] = useState(null);
-  const [rocratePath, setRocratePath] = useState("");
   const [roCrateMetadata, setRoCrateMetadata] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
@@ -93,15 +92,20 @@ export default function App() {
   };
 
   const handleDatasetSubmit = (formData) => {
-    // Handle the dataset form submission
     console.log("Dataset form submitted:", formData);
     showNotification("Dataset registered successfully!", "success");
     setCurrentView("preview");
   };
 
-  const handleInitCrateSuccess = () => {
+  const handleInitCrateSuccess = (updatedProject) => {
+    setSelectedProject(updatedProject);
     showNotification("RO-Crate initialized successfully!", "success");
     setCurrentView("download");
+  };
+
+  const updateProject = async (updatedProject) => {
+    setSelectedProject(updatedProject);
+    // Here you would also update the project in your project list/storage
   };
 
   const renderContent = () => {
@@ -123,10 +127,9 @@ export default function App() {
       case "init-crate":
         return (
           <InitForm
-            rocratePath={rocratePath}
-            setRocratePath={setRocratePath}
             onSuccess={handleInitCrateSuccess}
             selectedProject={selectedProject}
+            updateProject={updateProject}
           />
         );
       case "download":
@@ -134,7 +137,6 @@ export default function App() {
           <DownloadSnapshotView
             project={selectedProject}
             onDownloadComplete={handleDownloadComplete}
-            setRocratePath={setRocratePath}
           />
         );
       case "dataset-form":

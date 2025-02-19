@@ -22,11 +22,7 @@ import {
 
 import { Title } from "../styles";
 
-const DownloadSnapshotView = ({
-  project,
-  onDownloadComplete,
-  setRocratePath,
-}) => {
+const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [projectData, setProjectData] = useState([]);
   const [projectName, setProjectName] = useState("");
   const [expandedForms, setExpandedForms] = useState(new Set());
@@ -35,14 +31,25 @@ const DownloadSnapshotView = ({
   const [downloadMode, setDownloadMode] = useState("fields");
   const [dateRange, setDateRange] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log("Project received:", project); // Debug log
     if (project) {
-      setProjectData(project.formData || []);
-      setProjectName(project.name);
+      console.log("Project formData:", project.formData); // Debug log
+      if (!project.formData) {
+        setError("No form data available in project");
+        return;
+      }
+      setProjectData(project.formData);
+      setProjectName(project.name || "Unnamed Project");
+      setError(null);
+    } else {
+      setError("No project data received");
     }
   }, [project]);
 
+  // Rest of the component code remains the same...
   const toggleForm = (formName) => {
     const newExpanded = new Set(expandedForms);
     if (newExpanded.has(formName)) {
@@ -55,9 +62,8 @@ const DownloadSnapshotView = ({
 
   const toggleFormSelection = (formName) => {
     const newSelectedForms = new Set(selectedForms);
-    const formFields = projectData.find(
-      (form) => form.form_name === formName
-    ).fields;
+    const formFields =
+      projectData.find((form) => form.form_name === formName)?.fields || [];
 
     if (newSelectedForms.has(formName)) {
       newSelectedForms.delete(formName);
@@ -84,9 +90,10 @@ const DownloadSnapshotView = ({
     if (newSelectedFields.has(fieldKey)) {
       newSelectedFields.delete(fieldKey);
       // If no fields from this form are selected, unselect the form
-      const formFields = projectData
-        .find((form) => form.form_name === formName)
-        .fields.map((field) => `${formName}.${field.field_name}`);
+      const formFields =
+        projectData
+          .find((form) => form.form_name === formName)
+          ?.fields.map((field) => `${formName}.${field.field_name}`) || [];
       const hasSelectedFields = formFields.some((field) =>
         newSelectedFields.has(field)
       );
@@ -107,8 +114,16 @@ const DownloadSnapshotView = ({
     setSelectedFields(newSelectedFields);
   };
 
-  const downloadFile = async (data, filename, onDownloadComplete) => {
-    // Create blob and trigger browser download
+  const generateFilename = () => {
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const dateRangeStr =
+      dateRange.dateRangeBegin && dateRange.dateRangeEnd
+        ? `_${dateRange.dateRangeBegin}_to_${dateRange.dateRangeEnd}`
+        : "";
+    return `${projectName}_export${dateRangeStr}_${timestamp}.csv`;
+  };
+
+  const downloadFile = async (data, filename) => {
     const blob = new Blob([data], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -117,31 +132,15 @@ const DownloadSnapshotView = ({
     document.body.appendChild(link);
     link.click();
     link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url); // Clean up the URL object
-
-    try {
-      // Check if fs is available before attempting to write
-      if (typeof window.fs?.writeFile === "function") {
-        const fileData = new Uint8Array(
-          data.split("").map((char) => char.charCodeAt(0))
-        );
-        await window.fs.writeFile(filename, fileData);
-        onDownloadComplete?.(filename);
-      } else {
-        // If fs is not available, still call onDownloadComplete
-        onDownloadComplete?.(filename);
-        console.warn(
-          "window.fs.writeFile not available - file was downloaded but not saved to filesystem"
-        );
-      }
-    } catch (error) {
-      console.error("Error saving file:", error);
-      // Still call onDownloadComplete since the browser download succeeded
-      onDownloadComplete?.(filename);
-    }
+    window.URL.revokeObjectURL(url);
+    return filename;
   };
 
   const selectAllForms = () => {
+    if (!projectData.length) {
+      console.warn("No project data available for selecting forms");
+      return;
+    }
     const allForms = new Set(projectData.map((form) => form.form_name));
     const allFields = new Set();
     projectData.forEach((form) => {
@@ -177,20 +176,12 @@ const DownloadSnapshotView = ({
       }
 
       const data = await exportRecords(project.url, project.token, options);
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const dateRangeStr =
-        dateRange.dateRangeBegin && dateRange.dateRangeEnd
-          ? `_${dateRange.dateRangeBegin}_to_${dateRange.dateRangeEnd}`
-          : "";
-      const filename = `${projectName}_export${dateRangeStr}_${timestamp}.csv`;
-
-      // Pass the filename along with the data to downloadFile
-      downloadFile(data, filename, (filePath) => {
-        setRocratePath(filePath);
-        onDownloadComplete(filePath);
-      });
+      const filename = generateFilename();
+      const filePath = await downloadFile(data, filename);
+      onDownloadComplete(filePath);
     } catch (error) {
       console.error("Download failed:", error);
+      setError("Failed to download data: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -200,6 +191,11 @@ const DownloadSnapshotView = ({
     <PageContainer>
       <HeaderSection>
         <Title>{projectName} - Project Export</Title>
+        {error && (
+          <div style={{ color: "red", marginBottom: "1rem" }}>
+            Error: {error}
+          </div>
+        )}
 
         <ModeSelectorContainer>
           <ModeButton
@@ -235,18 +231,22 @@ const DownloadSnapshotView = ({
       <ScrollContent>
         {downloadMode === "fields" && (
           <FormContainer>
-            {projectData.map((form) => (
-              <FormCard
-                key={form.form_name}
-                form={form}
-                isExpanded={expandedForms.has(form.form_name)}
-                isSelected={selectedForms.has(form.form_name)}
-                selectedFields={selectedFields}
-                onToggleExpand={() => toggleForm(form.form_name)}
-                onToggleSelect={() => toggleFormSelection(form.form_name)}
-                onFieldSelect={toggleFieldSelection}
-              />
-            ))}
+            {projectData && projectData.length > 0 ? (
+              projectData.map((form) => (
+                <FormCard
+                  key={form.form_name}
+                  form={form}
+                  isExpanded={expandedForms.has(form.form_name)}
+                  isSelected={selectedForms.has(form.form_name)}
+                  selectedFields={selectedFields}
+                  onToggleExpand={() => toggleForm(form.form_name)}
+                  onToggleSelect={() => toggleFormSelection(form.form_name)}
+                  onFieldSelect={toggleFieldSelection}
+                />
+              ))
+            ) : (
+              <div>No form data available</div>
+            )}
           </FormContainer>
         )}
       </ScrollContent>
@@ -258,7 +258,8 @@ const DownloadSnapshotView = ({
             (downloadMode === "fields" && selectedForms.size === 0) ||
             (downloadMode === "date" &&
               (!dateRange.dateRangeBegin || !dateRange.dateRangeEnd)) ||
-            isLoading
+            isLoading ||
+            !projectData.length
           }
         >
           <Download size={16} />
