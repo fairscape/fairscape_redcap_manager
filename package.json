@@ -16,6 +16,7 @@
     "@radix-ui/react-slot": "^1.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8",
+    "frictionless.js": "^0.13.4",
     "lucide-react": "^0.460.0",
     "papaparse": "^5.5.2",
     "react": "^18.3.1",

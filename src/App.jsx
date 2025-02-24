@@ -7,6 +7,7 @@ import ManageProjectsView from "./components/ManageProjectsView";
 import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
 import DatasetForm from "./components/dataset/DatasetForm";
 import PreviewValidationView from "./components/PreviewValidationView";
+import DeidentificationVerificationView from "./components/deidentification/DeidentificationVerificationView";
 import InitForm from "./components/InitForm";
 import { AppContainer, MainContent } from "./components/styles";
 
@@ -29,6 +30,7 @@ export default function App() {
   const [selectedData, setSelectedData] = useState(null);
   const [downloadedFilePath, setDownloadedFilePath] = useState(null);
   const [downloadedschemaID, setDownloadedschemaID] = useState(null);
+  const [deidentifiedFilePath, setDeidentifiedFilePath] = useState(null);
   const [pendingView, setPendingView] = useState(null);
   const [roCrateMetadata, setRoCrateMetadata] = useState(null);
   const [notification, setNotification] = useState({
@@ -50,7 +52,6 @@ export default function App() {
 
   const handleViewChange = (view, projectOverride = null) => {
     const projectToUse = projectOverride || selectedProject;
-
     if (
       !projectToUse &&
       (view === "download" ||
@@ -84,7 +85,6 @@ export default function App() {
     if (schemaID) {
       setDownloadedschemaID(schemaID);
     }
-
     if (selectedProject?.rocrateMetadata) {
       setRoCrateMetadata(selectedProject.rocrateMetadata);
       handleViewChange("dataset-form");
@@ -108,6 +108,15 @@ export default function App() {
     setSelectedProject(updatedProject);
     showNotification("RO-Crate initialized successfully!", "success");
     handleViewChange("download", updatedProject);
+  };
+
+  const handleDeidentificationComplete = (filePath) => {
+    setDeidentifiedFilePath(filePath);
+    showNotification(
+      "De-identification verification completed successfully!",
+      "success"
+    );
+    handleViewChange("upload");
   };
 
   const updateProject = async (updatedProject) => {
@@ -166,9 +175,14 @@ export default function App() {
           />
         );
       case "deidentify":
-        return <div>TO-DO</div>;
+        return (
+          <DeidentificationVerificationView
+            project={selectedProject}
+            onVerificationComplete={handleDeidentificationComplete}
+          />
+        );
       case "upload":
-        return <div>TO-DO</div>;
+        return <div>Upload view - to be implemented</div>;
       default:
         return <div>Content for {currentView}</div>;
     }

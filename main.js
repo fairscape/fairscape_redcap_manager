@@ -44,6 +44,16 @@ async function saveProjects(projects) {
 // IPC Handlers
 ipcMain.handle("load-projects", loadProjects);
 
+ipcMain.handle("list-directory", async (_, { path: dirPath }) => {
+  try {
+    const files = await fs.readdir(dirPath);
+    return files;
+  } catch (error) {
+    console.error("Error listing directory:", error);
+    throw error;
+  }
+});
+
 ipcMain.handle("save-project", async (_, project) => {
   try {
     const projects = await loadProjects();
