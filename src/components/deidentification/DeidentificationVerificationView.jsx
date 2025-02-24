@@ -1,163 +1,43 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  Check,
-  AlertTriangle,
-  RefreshCw,
-  Upload,
-  FileCheck,
-  Shield,
-  X,
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
 const { ipcRenderer } = window.require("electron");
 import {
   verifyREDCapExport,
   extractIdentifiedFields,
 } from "../../services/deidentification-verifier";
-
 import {
-  ContentWrapper,
-  FormCard,
-  FormHeader,
-  FormTitle,
-  FormTableContainer,
-  FormTable,
-  FormTableHead,
-  FormTableHeader,
-  FormTableBody,
-  FormTableCell,
-  ActionButton,
-  Title,
-  ValidationInfo,
-} from "../styles";
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  ArrowRight,
+} from "lucide-react";
 
-import styled from "styled-components";
+// Import sub-components
+import DeidentificationInstructions from "./DeidentificationInstructions";
+import DeidentificationErrors from "./DeidentificationErrors";
 
-const VerificationContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-`;
+import { ContentWrapper, Title, ActionButton } from "../styles";
+import { VerificationContainer } from "./DeidentificationStyles";
 
-const ChecklistCard = styled(FormCard)`
-  margin-top: 1rem;
-`;
-
-const ChecklistItem = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  gap: 0.75rem;
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const ChecklistText = styled.div`
-  flex: 1;
-`;
-
-const CheckIcon = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background-color: ${(props) => (props.$checked ? "#10b981" : "#f3f4f6")};
-  color: ${(props) => (props.$checked ? "white" : "#9ca3af")};
-`;
-
-const CrossIcon = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  background-color: #ef4444;
-  color: white;
-`;
-
-const FindingsContainer = styled.div`
-  margin-top: 1rem;
-`;
-
-const FileUploadContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  border: 2px dashed #ccc;
-  border-radius: 0.5rem;
-  margin: 1rem 0;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #666;
-  }
-`;
-
-const HiddenInput = styled.input`
-  display: none;
-`;
-
-const LoadingContainer = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  gap: 0.5rem;
-`;
-
-const ResultBox = styled.div`
-  background-color: ${(props) => (props.$success ? "#ecfdf5" : "#fef2f2")};
-  border: 1px solid ${(props) => (props.$success ? "#10b981" : "#ef4444")};
-  color: ${(props) => (props.$success ? "#065f46" : "#b91c1c")};
-  padding: 1rem;
-  border-radius: 0.375rem;
-  margin-top: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const ConfirmationCheckbox = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-radius: 0.375rem;
-`;
-
-const DeidentificationVerificationView = ({
+const DeidentificationVerificationContainer = ({
   project,
   onVerificationComplete,
 }) => {
-  const [deidentifiedFilePath, setDeidentifiedFilePath] = useState(null);
-  const [verificationResults, setVerificationResults] = useState(null);
+  const [step, setStep] = useState("instructions"); // instructions, validating, success, errors
+  const [fileValidationResults, setFileValidationResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [confirmationChecked, setConfirmationChecked] = useState(false);
   const [rocrateFiles, setRocrateFiles] = useState([]);
-  const fileInputRef = useRef(null);
-
-  // Requirements status
-  const [requirementsMet, setRequirementsMet] = useState({
-    validationPassed: false,
-    noIdentifiedCSV: false,
-    confirmedDeidentified: false,
-  });
+  const [currentFileBeingValidated, setCurrentFileBeingValidated] =
+    useState("");
+  const [validatedFileCount, setValidatedFileCount] = useState(0);
+  const [totalFilesToValidate, setTotalFilesToValidate] = useState(0);
 
   useEffect(() => {
-    const checkRocrateContents = async () => {
+    // Initially load the files in the RO-crate path
+    const loadRocrateFiles = async () => {
       if (!project?.rocratePath) {
         console.warn("No RO-Crate path found in project");
+        setErrorMessage("No RO-Crate path found in project");
         return;
       }
 
@@ -165,303 +45,279 @@ const DeidentificationVerificationView = ({
         const files = await ipcRenderer.invoke("list-directory", {
           path: project.rocratePath,
         });
-        setRocrateFiles(files);
+        setRocrateFiles(files.filter((f) => f.toLowerCase().endsWith(".csv")));
       } catch (error) {
         console.error("Error listing RO-Crate directory:", error);
         setErrorMessage("Error checking RO-Crate contents");
       }
     };
 
-    checkRocrateContents();
+    loadRocrateFiles();
   }, [project]);
 
-  const handleFileSelect = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setDeidentifiedFilePath(file.name);
-    setIsLoading(true);
-    setErrorMessage(null);
-    setVerificationResults(null);
+  const startValidation = async () => {
+    if (!project?.rocratePath) {
+      console.warn("No RO-Crate path found in project");
+      setErrorMessage("No RO-Crate path found in project");
+      return;
+    }
 
     try {
-      // If we have form data, extract identified fields
+      setStep("validating");
+      setIsLoading(true);
+      setFileValidationResults([]);
+      setValidatedFileCount(0);
+      setErrorMessage(null);
+
+      // Filter for CSV files only
+      const csvFiles = rocrateFiles;
+      setTotalFilesToValidate(csvFiles.length);
+
+      if (csvFiles.length === 0) {
+        // No CSV files to validate, we can consider this passed
+        setStep("success");
+        setIsLoading(false);
+        return;
+      }
+
+      // Extract identified fields if form data exists
       const identifiedFields = project?.formData
         ? extractIdentifiedFields(project.formData)
         : [];
 
-      // Verify the file
-      const results = await verifyREDCapExport(file.name, identifiedFields);
-      setVerificationResults(results);
+      // Store results for each file
+      const results = [];
+      let allPassed = true;
 
-      // Update requirement status
-      setRequirementsMet((prev) => ({
-        ...prev,
-        validationPassed: results.isDeidentified,
-        // Check if we can find an identified file with the same name in the RO-crate
-        noIdentifiedCSV: !rocrateFiles.some(
-          (f) =>
-            f.toLowerCase().includes("identified") &&
-            f.toLowerCase().endsWith(".csv")
-        ),
-      }));
+      // Validate each CSV file
+      for (let i = 0; i < csvFiles.length; i++) {
+        const csvFile = csvFiles[i];
+        setCurrentFileBeingValidated(csvFile);
+        setValidatedFileCount(i);
+
+        try {
+          // Get the full path to the CSV file
+          const csvPath = `${project.rocratePath}/${csvFile}`;
+
+          // Run verification on the CSV file
+          const result = await verifyREDCapExport(csvPath, identifiedFields);
+
+          // Store the result with the filename
+          results.push({
+            filename: csvFile,
+            ...result,
+          });
+
+          // Track if all files have passed validation
+          if (!result.isDeidentified) {
+            allPassed = false;
+          }
+        } catch (error) {
+          console.error(`Error verifying file ${csvFile}:`, error);
+          results.push({
+            filename: csvFile,
+            isDeidentified: false,
+            error: error.message,
+            findings: [],
+            presentIdentifiedColumns: [],
+          });
+          allPassed = false;
+        }
+
+        // Small delay to make the UI more responsive and show progress
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      setValidatedFileCount(csvFiles.length);
+
+      // Store the validation results
+      setFileValidationResults(results);
+
+      // Determine next step based on validation results
+      if (allPassed) {
+        setStep("success");
+      } else {
+        setStep("errors");
+      }
     } catch (error) {
-      console.error("Error verifying file:", error);
-      setErrorMessage(`Error verifying file: ${error.message}`);
+      console.error("Error during validation:", error);
+      setErrorMessage(`Error during validation: ${error.message}`);
+      setStep("instructions");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleConfirmationChange = (e) => {
-    setConfirmationChecked(e.target.checked);
-    setRequirementsMet((prev) => ({
-      ...prev,
-      confirmedDeidentified: e.target.checked,
-    }));
+  const handleRetry = async () => {
+    // Reset state and restart validation
+    setFileValidationResults([]);
+
+    // Return to instructions step to start fresh
+    setStep("instructions");
+
+    // Re-load the files in case they've changed
+    try {
+      const files = await ipcRenderer.invoke("list-directory", {
+        path: project.rocratePath,
+      });
+      setRocrateFiles(files.filter((f) => f.toLowerCase().endsWith(".csv")));
+    } catch (error) {
+      console.error("Error listing RO-Crate directory:", error);
+      setErrorMessage("Error checking RO-Crate contents");
+    }
   };
 
-  const allRequirementsMet =
-    requirementsMet.validationPassed &&
-    requirementsMet.noIdentifiedCSV &&
-    requirementsMet.confirmedDeidentified;
+  const handleContinue = () => {
+    // Pass the validated RO-crate path
+    onVerificationComplete(project.rocratePath);
+  };
+
+  const renderCurrentStep = () => {
+    switch (step) {
+      case "instructions":
+        return (
+          <DeidentificationInstructions
+            rocrateFiles={rocrateFiles}
+            rocratePath={project?.rocratePath}
+            onStartValidation={startValidation}
+          />
+        );
+      case "validating":
+        return (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Checking Your Files</h2>
+
+            <div className="flex flex-col items-center justify-center p-6 mb-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-4 mb-4">
+                <RefreshCw className="animate-spin text-blue-500" size={28} />
+                <span className="text-lg font-medium text-blue-700">
+                  Scanning CSV files for identifiable information
+                </span>
+              </div>
+
+              <div className="w-full max-w-md bg-gray-200 rounded-full h-2.5 mb-2">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full"
+                  style={{
+                    width: `${
+                      totalFilesToValidate > 0
+                        ? Math.round(
+                            (validatedFileCount / totalFilesToValidate) * 100
+                          )
+                        : 0
+                    }%`,
+                  }}
+                ></div>
+              </div>
+
+              <div className="text-sm text-gray-600 mt-2">
+                {validatedFileCount} of {totalFilesToValidate} files checked
+              </div>
+
+              {currentFileBeingValidated && (
+                <div className="text-sm text-gray-600 mt-2">
+                  Currently checking: {currentFileBeingValidated}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md">
+              <div className="flex items-start">
+                <AlertTriangle
+                  className="text-yellow-500 mr-3 mt-0.5 flex-shrink-0"
+                  size={18}
+                />
+                <div>
+                  <p className="text-sm text-yellow-800">
+                    Please don't close the application during this process.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case "success":
+        return (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex flex-col items-center text-center p-6">
+              <div className="bg-green-100 p-4 rounded-full mb-4">
+                <CheckCircle className="text-green-600" size={48} />
+              </div>
+              <h2 className="text-2xl font-semibold mb-2">
+                All Files Look Good
+              </h2>
+              <p className="text-gray-600 mb-6">
+                No obvious identifiers were found in your files. You can now
+                continue to the next step.
+              </p>
+
+              <ActionButton
+                onClick={handleContinue}
+                className="flex items-center gap-2 py-3 px-6 text-lg font-medium"
+              >
+                Continue to Next Step
+                <ArrowRight size={20} />
+              </ActionButton>
+            </div>
+          </div>
+        );
+      case "errors":
+        return (
+          <DeidentificationErrors
+            validationResults={fileValidationResults}
+            onRetry={handleRetry}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <ContentWrapper>
-      <div className="mb-8">
-        <Title>De-identification Verification</Title>
+      <div className="mb-6">
+        <Title>De-identification Check</Title>
       </div>
 
-      <VerificationContainer>
-        <FormCard>
-          <FormHeader>
-            <FormTitle>Upload De-identified CSV</FormTitle>
-          </FormHeader>
+      <VerificationContainer>{renderCurrentStep()}</VerificationContainer>
 
-          <div className="p-4">
-            <p className="mb-4">
-              Upload your de-identified data file for verification. The system
-              will check for potential PHI and ensure identified columns have
-              been removed.
-            </p>
-
-            {!deidentifiedFilePath ? (
-              <FileUploadContainer
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload size={32} className="mb-4" />
-                <p>Click to upload your de-identified data file</p>
-                <HiddenInput
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileSelect}
-                />
-              </FileUploadContainer>
-            ) : (
-              <div className="p-2">
-                <div className="flex items-center gap-2">
-                  <FileCheck size={20} />
-                  <span>
-                    Selected file: {deidentifiedFilePath.split(/[/\\]/).pop()}
-                  </span>
-                </div>
-                <ActionButton
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-2"
-                >
-                  Change File
-                </ActionButton>
-                <HiddenInput
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileSelect}
-                />
-              </div>
-            )}
-
-            {isLoading && (
-              <LoadingContainer>
-                <RefreshCw className="animate-spin" size={20} />
-                Verifying de-identification...
-              </LoadingContainer>
-            )}
-
-            {errorMessage && (
-              <ResultBox $success={false}>
-                <AlertTriangle size={20} />
-                {errorMessage}
-              </ResultBox>
-            )}
-
-            {verificationResults && !isLoading && (
-              <FindingsContainer>
-                <ResultBox $success={verificationResults.isDeidentified}>
-                  {verificationResults.isDeidentified ? (
-                    <>
-                      <Check size={20} />
-                      No PHI or identified columns detected
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle size={20} />
-                      Potential PHI or identified columns detected
-                    </>
-                  )}
-                </ResultBox>
-
-                {verificationResults.presentIdentifiedColumns.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold">
-                      Identified columns present:
-                    </h3>
-                    <ul className="list-disc pl-5 mt-2">
-                      {verificationResults.presentIdentifiedColumns.map(
-                        (column, i) => (
-                          <li key={i} className="text-red-600">
-                            {column}
-                          </li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                )}
-
-                {verificationResults.findings.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold">Potential PHI detected:</h3>
-                    <FormTableContainer className="mt-2">
-                      <FormTable>
-                        <FormTableHead>
-                          <tr>
-                            <FormTableHeader>Row</FormTableHeader>
-                            <FormTableHeader>Column</FormTableHeader>
-                            <FormTableHeader>Type</FormTableHeader>
-                            <FormTableHeader>Value</FormTableHeader>
-                            <FormTableHeader>Confidence</FormTableHeader>
-                          </tr>
-                        </FormTableHead>
-                        <FormTableBody>
-                          {verificationResults.findings.map((finding, i) => (
-                            <tr key={i}>
-                              <FormTableCell>{finding.row}</FormTableCell>
-                              <FormTableCell>{finding.column}</FormTableCell>
-                              <FormTableCell>{finding.phiType}</FormTableCell>
-                              <FormTableCell>{finding.value}</FormTableCell>
-                              <FormTableCell>
-                                {finding.confidence}
-                              </FormTableCell>
-                            </tr>
-                          ))}
-                        </FormTableBody>
-                      </FormTable>
-                    </FormTableContainer>
-                  </div>
-                )}
-              </FindingsContainer>
-            )}
+      {errorMessage && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="flex items-start gap-2">
+            <AlertTriangle
+              size={18}
+              className="text-red-500 mt-0.5 flex-shrink-0"
+            />
+            <div>{errorMessage}</div>
           </div>
-        </FormCard>
+        </div>
+      )}
 
-        <ChecklistCard>
-          <FormHeader>
-            <FormTitle>Verification Checklist</FormTitle>
-          </FormHeader>
-
-          <div>
-            <ChecklistItem>
-              {requirementsMet.validationPassed ? (
-                <CheckIcon $checked={true}>
-                  <Check size={12} />
-                </CheckIcon>
-              ) : verificationResults ? (
-                <CrossIcon>
-                  <X size={12} />
-                </CrossIcon>
-              ) : (
-                <CheckIcon $checked={false}>
-                  <Check size={12} />
-                </CheckIcon>
-              )}
-              <ChecklistText>
-                <strong>Automated validation passed</strong>
-                <p className="text-sm text-gray-500">
-                  Data file passed PHI and identifiable column check
-                </p>
-              </ChecklistText>
-            </ChecklistItem>
-
-            <ChecklistItem>
-              {requirementsMet.noIdentifiedCSV ? (
-                <CheckIcon $checked={true}>
-                  <Check size={12} />
-                </CheckIcon>
-              ) : (
-                <CrossIcon>
-                  <X size={12} />
-                </CrossIcon>
-              )}
-              <ChecklistText>
-                <strong>No identified data in project folder</strong>
-                <p className="text-sm text-gray-500">
-                  No identified CSV files have been found in the project folder
-                </p>
-              </ChecklistText>
-            </ChecklistItem>
-
-            <ChecklistItem>
-              <CheckIcon $checked={requirementsMet.confirmedDeidentified}>
-                <Check size={12} />
-              </CheckIcon>
-              <ChecklistText>
-                <strong>Institutional confirmation</strong>
-                <p className="text-sm text-gray-500">
-                  This data has been verified as safe for use according to
-                  institutional policy
-                </p>
-              </ChecklistText>
-            </ChecklistItem>
-
-            <ConfirmationCheckbox>
-              <input
-                type="checkbox"
-                id="confirmation"
-                checked={confirmationChecked}
-                onChange={handleConfirmationChange}
+      {isLoading && step !== "validating" && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-md flex items-center gap-2">
+            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
               />
-              <label htmlFor="confirmation">
-                I confirm that this data has been properly de-identified
-                according to UVA Health standards and policies
-              </label>
-            </ConfirmationCheckbox>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            Processing...
           </div>
-        </ChecklistCard>
-      </VerificationContainer>
-
-      <div className="mt-4 mb-4 flex justify-end">
-        <ActionButton
-          onClick={() => onVerificationComplete(deidentifiedFilePath)}
-          className="flex items-center gap-2"
-          disabled={!allRequirementsMet}
-        >
-          Continue to Next Step
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M5 12h14m-7-7 7 7-7 7" />
-          </svg>
-        </ActionButton>
-      </div>
+        </div>
+      )}
     </ContentWrapper>
   );
 };
 
-export default DeidentificationVerificationView;
+export default DeidentificationVerificationContainer;
