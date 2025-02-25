@@ -14,6 +14,7 @@ import {
 // Import sub-components
 import DeidentificationInstructions from "./DeidentificationInstructions";
 import DeidentificationErrors from "./DeidentificationErrors";
+import DeidentificationChecklist from "./DeidentificationChecklist";
 
 import { ContentWrapper, Title, ActionButton } from "../styles";
 import { VerificationContainer } from "./DeidentificationStyles";
@@ -22,7 +23,7 @@ const DeidentificationVerificationContainer = ({
   project,
   onVerificationComplete,
 }) => {
-  const [step, setStep] = useState("instructions"); // instructions, validating, success, errors
+  const [step, setStep] = useState("instructions"); // instructions, validating, success, errors, checklist
   const [fileValidationResults, setFileValidationResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -31,6 +32,9 @@ const DeidentificationVerificationContainer = ({
     useState("");
   const [validatedFileCount, setValidatedFileCount] = useState(0);
   const [totalFilesToValidate, setTotalFilesToValidate] = useState(0);
+  const [requirementsMet, setRequirementsMet] = useState({
+    confirmedDeidentified: false,
+  });
 
   useEffect(() => {
     // Initially load the files in the RO-crate path
@@ -88,6 +92,7 @@ const DeidentificationVerificationContainer = ({
       // Store results for each file
       const results = [];
       let allPassed = true;
+      let hasIdentifiedColumns = false;
 
       // Validate each CSV file
       for (let i = 0; i < csvFiles.length; i++) {
@@ -111,6 +116,11 @@ const DeidentificationVerificationContainer = ({
           // Track if all files have passed validation
           if (!result.isDeidentified) {
             allPassed = false;
+          }
+
+          // Check if any identified columns are present
+          if (result.presentIdentifiedColumns.length > 0) {
+            hasIdentifiedColumns = true;
           }
         } catch (error) {
           console.error(`Error verifying file ${csvFile}:`, error);
@@ -170,6 +180,29 @@ const DeidentificationVerificationContainer = ({
   const handleContinue = () => {
     // Pass the validated RO-crate path
     onVerificationComplete(project.rocratePath);
+  };
+
+  const handleOverrideValidation = () => {
+    // User is overriding the validation check
+    setStep("checklist");
+  };
+
+  const handleConfirmationChange = (isChecked) => {
+    setRequirementsMet({
+      ...requirementsMet,
+      confirmedDeidentified: isChecked,
+    });
+  };
+
+  const hasOnlyPotentialPHI = () => {
+    // Check if there are no identified columns present, only potential PHI findings
+    const hasIdentifiedColumns = fileValidationResults.some(
+      (result) =>
+        result.presentIdentifiedColumns &&
+        result.presentIdentifiedColumns.length > 0
+    );
+
+    return !hasIdentifiedColumns;
   };
 
   const renderCurrentStep = () => {
@@ -266,6 +299,14 @@ const DeidentificationVerificationContainer = ({
           <DeidentificationErrors
             validationResults={fileValidationResults}
             onRetry={handleRetry}
+            onOverride={hasOnlyPotentialPHI() ? handleOverrideValidation : null}
+          />
+        );
+      case "sucess":
+        return (
+          <DeidentificationChecklist
+            requirementsMet={requirementsMet}
+            onConfirmationChange={handleConfirmationChange}
           />
         );
       default:
@@ -290,6 +331,23 @@ const DeidentificationVerificationContainer = ({
             />
             <div>{errorMessage}</div>
           </div>
+        </div>
+      )}
+
+      {step === "checklist" && (
+        <div className="mt-6 flex justify-center">
+          <ActionButton
+            onClick={handleContinue}
+            disabled={!requirementsMet.confirmedDeidentified}
+            className={`flex items-center gap-2 py-3 px-6 text-lg font-medium ${
+              !requirementsMet.confirmedDeidentified
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
+          >
+            Continue to Next Step
+            <ArrowRight size={20} />
+          </ActionButton>
         </div>
       )}
 
