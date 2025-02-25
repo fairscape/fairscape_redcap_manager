@@ -23,7 +23,7 @@ const DeidentificationVerificationContainer = ({
   project,
   onVerificationComplete,
 }) => {
-  const [step, setStep] = useState("instructions"); // instructions, validating, success, errors, checklist
+  const [step, setStep] = useState("instructions"); // instructions, validating, errors, checklist
   const [fileValidationResults, setFileValidationResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -79,7 +79,7 @@ const DeidentificationVerificationContainer = ({
 
       if (csvFiles.length === 0) {
         // No CSV files to validate, we can consider this passed
-        setStep("success");
+        setStep("checklist");
         setIsLoading(false);
         return;
       }
@@ -145,7 +145,7 @@ const DeidentificationVerificationContainer = ({
 
       // Determine next step based on validation results
       if (allPassed) {
-        setStep("success");
+        setStep("checklist");
       } else {
         setStep("errors");
       }
@@ -269,31 +269,6 @@ const DeidentificationVerificationContainer = ({
             </div>
           </div>
         );
-      case "success":
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div className="flex flex-col items-center text-center p-6">
-              <div className="bg-green-100 p-4 rounded-full mb-4">
-                <CheckCircle className="text-green-600" size={48} />
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">
-                All Files Look Good
-              </h2>
-              <p className="text-gray-600 mb-6">
-                No obvious identifiers were found in your files. You can now
-                continue to the next step.
-              </p>
-
-              <ActionButton
-                onClick={handleContinue}
-                className="flex items-center gap-2 py-3 px-6 text-lg font-medium"
-              >
-                Continue to Next Step
-                <ArrowRight size={20} />
-              </ActionButton>
-            </div>
-          </div>
-        );
       case "errors":
         return (
           <DeidentificationErrors
@@ -302,7 +277,7 @@ const DeidentificationVerificationContainer = ({
             onOverride={hasOnlyPotentialPHI() ? handleOverrideValidation : null}
           />
         );
-      case "sucess":
+      case "checklist":
         return (
           <DeidentificationChecklist
             requirementsMet={requirementsMet}

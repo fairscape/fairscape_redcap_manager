@@ -5,6 +5,8 @@ import {
   ChevronUp,
   RefreshCw,
   CheckCircle,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
 import {
   FormCard,
@@ -137,6 +139,14 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     marginTop: "1.5rem",
+    gap: "1rem",
+  },
+  warningBox: {
+    backgroundColor: "#fef9c3",
+    padding: "1rem",
+    borderRadius: "0.375rem",
+    marginTop: "1.5rem",
+    marginBottom: "1rem",
   },
 };
 
@@ -236,8 +246,14 @@ const FileValidationDetails = ({ result }) => {
   );
 };
 
-const DeidentificationErrors = ({ validationResults, onRetry }) => {
+const DeidentificationErrors = ({ validationResults, onRetry, onOverride }) => {
   if (!validationResults || validationResults.length === 0) return null;
+
+  const hasIdentifiedColumns = validationResults.some(
+    (result) =>
+      result.presentIdentifiedColumns &&
+      result.presentIdentifiedColumns.length > 0
+  );
 
   const failedFiles = validationResults.filter(
     (result) => !result.isDeidentified
@@ -249,13 +265,15 @@ const DeidentificationErrors = ({ validationResults, onRetry }) => {
         <div style={styles.container}>
           <ResultBox $success={false} style={styles.alertBox}>
             <AlertTriangle size={20} />
-            Potential PHI detected in project files
+            {hasIdentifiedColumns
+              ? "PHI detected in project files"
+              : "Potential PHI detected in project files"}
           </ResultBox>
 
           <p style={styles.errorMessage}>
-            Some CSV files in your project folder contain PHI or identifiable
-            information. Please review the issues below and remove all
-            identifying information.
+            {hasIdentifiedColumns
+              ? "Some CSV files in your project folder contain PHI or identifiable information. Please review the issues below and remove all identifying information."
+              : "Our automated scan has detected potential PHI in your files. Review the findings below to determine if any action is needed."}
           </p>
 
           <div style={styles.instructionsBox}>
@@ -265,13 +283,19 @@ const DeidentificationErrors = ({ validationResults, onRetry }) => {
                 Review each file marked with issues below
               </li>
               <li style={styles.instructionsItem}>
-                Remove or transform any identified columns and PHI
+                {hasIdentifiedColumns
+                  ? "Remove or transform any identified columns and PHI"
+                  : "Verify if detected items are actually PHI or false positives"}
               </li>
               <li style={styles.instructionsItem}>
-                Replace the problematic files in your project folder
+                {hasIdentifiedColumns
+                  ? "Replace the problematic files in your project folder"
+                  : "If needed, replace the problematic files in your project folder"}
               </li>
               <li style={styles.instructionsItem}>
-                Click "Retry Validation" when complete
+                {hasIdentifiedColumns
+                  ? "Click 'Retry Validation' when complete"
+                  : "Click 'Retry Validation' or 'Override and Continue' when complete"}
               </li>
             </ol>
           </div>
@@ -284,6 +308,29 @@ const DeidentificationErrors = ({ validationResults, onRetry }) => {
             ))}
           </div>
 
+          {!hasIdentifiedColumns && (
+            <div style={styles.warningBox}>
+              <div className="flex items-start gap-2">
+                <ShieldAlert
+                  size={20}
+                  className="text-yellow-600 mt-0.5 flex-shrink-0"
+                />
+                <div>
+                  <p className="font-medium text-yellow-800 mb-1">
+                    No identified columns detected
+                  </p>
+                  <p className="text-yellow-700 text-sm">
+                    While our system has detected potential PHI, no known
+                    identified columns are present. Some of these findings may
+                    be false positives. You can either fix the issues or
+                    override and continue if you're certain the data is properly
+                    de-identified.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={styles.warningNote}>
             All CSV files in your project folder must be properly de-identified
             before continuing. The system scans for potential PHI and known
@@ -295,6 +342,16 @@ const DeidentificationErrors = ({ validationResults, onRetry }) => {
               <RefreshCw size={16} />
               Retry Validation
             </ActionButton>
+
+            {onOverride && (
+              <ActionButton
+                onClick={onOverride}
+                className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700"
+              >
+                <ArrowRight size={16} />
+                Override and Continue
+              </ActionButton>
+            )}
           </div>
         </div>
       </ContentWrapper>
