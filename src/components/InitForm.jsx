@@ -238,7 +238,7 @@ function InitForm({ onSuccess, selectedProject, updateProject }) {
     <InitFormContainer>
       <FormCard>
         <FormHeader>
-          <FormTitle>Initialize Pipeline RO-Crate</FormTitle>
+          <FormTitle>Initialize RO-Crate</FormTitle>
         </FormHeader>
         <form onSubmit={handleSubmit}>
           <FormTableContainer>

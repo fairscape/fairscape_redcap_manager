@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { ipcRenderer } from "electron";
-import { Pencil, Trash2, Save, X, Plus, ExternalLink } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Save,
+  X,
+  Plus,
+  ExternalLink,
+  HelpCircle,
+} from "lucide-react";
 import { exportMetadata } from "../services/redcap-api";
 import {
   ContentWrapper,
@@ -16,6 +24,31 @@ import {
   Title,
   FormTableContainer,
 } from "./styles";
+
+const styles = {
+  instructionsBox: {
+    background: "#eff6ff",
+    padding: "1rem",
+    borderRadius: "4px",
+    border: "1px solid #bfdbfe",
+    marginTop: "1.5rem",
+  },
+  instructionsTitle: {
+    fontWeight: "500",
+    color: "#1e40af",
+    marginBottom: "0.5rem",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  instructionsList: {
+    paddingLeft: "1.25rem",
+    color: "#1e40af",
+  },
+  instructionsItem: {
+    marginBottom: "0.5rem",
+  },
+};
 
 const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
   const [projects, setProjects] = useState([]);
@@ -292,6 +325,36 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
             </FormTableBody>
           </FormTable>
         </FormTableContainer>
+
+        <div style={styles.instructionsBox}>
+          <h3 style={styles.instructionsTitle}>
+            <HelpCircle size={16} />
+            How to Connect Your REDCap Database:
+          </h3>
+          <ol style={styles.instructionsList}>
+            <li style={styles.instructionsItem}>
+              Login into your REDCap and select the database you'd like to
+              connect to.
+            </li>
+            <li style={styles.instructionsItem}>
+              Navigate to API under the Applications submenu on the left side of
+              the page.
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  fontStyle: "italic",
+                  marginTop: "0.25rem",
+                }}
+              >
+                Note: If you do not see API on the menu options, work with your
+                administrator to get the proper permissions.
+              </div>
+            </li>
+            <li style={styles.instructionsItem}>
+              Copy your token and API url into the above boxes to connect.
+            </li>
+          </ol>
+        </div>
       </FormCard>
       {notification.open && (
         <NotificationBox severity={notification.severity}>

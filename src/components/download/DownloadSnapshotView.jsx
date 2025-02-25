@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, HelpCircle, X } from "lucide-react";
 import { exportRecords } from "../../services/redcap-api";
 const { ipcRenderer } = window.require("electron");
 
@@ -26,6 +26,117 @@ import {
 } from "./download_styles";
 import { Title } from "../styles";
 
+const styles = {
+  helpIcon: {
+    cursor: "pointer",
+    color: "#3b82f6",
+    marginLeft: "0.5rem",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleContainer: {
+    display: "flex",
+    alignItems: "center",
+  },
+  popupOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  popupContent: {
+    backgroundColor: "white",
+    padding: "1.5rem",
+    borderRadius: "0.5rem",
+    maxWidth: "500px",
+    width: "90%",
+    position: "relative",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+  },
+  closeButton: {
+    position: "absolute",
+    top: "0.75rem",
+    right: "0.75rem",
+    cursor: "pointer",
+    color: "#6b7280",
+  },
+  popupTitle: {
+    fontSize: "1.25rem",
+    fontWeight: "600",
+    marginBottom: "1rem",
+    color: "#1e40af",
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+  },
+  instructionsBox: {
+    background: "#eff6ff",
+    padding: "1rem",
+    borderRadius: "4px",
+    border: "1px solid #bfdbfe",
+  },
+  instructionsList: {
+    paddingLeft: "1.25rem",
+    color: "#1e40af",
+    margin: "0.5rem 0",
+  },
+  instructionsItem: {
+    marginBottom: "0.5rem",
+  },
+  warningText: {
+    color: "#b91c1c",
+    fontWeight: "500",
+    marginTop: "1rem",
+    padding: "0.5rem",
+    backgroundColor: "#fee2e2",
+    borderRadius: "0.25rem",
+  },
+};
+
+const HelpPopup = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div style={styles.popupOverlay} onClick={onClose}>
+      <div style={styles.popupContent} onClick={(e) => e.stopPropagation()}>
+        <X style={styles.closeButton} size={20} onClick={onClose} />
+        <div style={styles.popupTitle}>
+          <HelpCircle size={20} />
+          How to Download Your Data
+        </div>
+        <div style={styles.instructionsBox}>
+          <ol style={styles.instructionsList}>
+            <li style={styles.instructionsItem}>
+              <strong>Select Fields</strong>: Choose specific forms and fields
+              you would like to include in your export.
+            </li>
+            <li style={styles.instructionsItem}>
+              <strong>Date Range</strong>: Alternatively, select a date range to
+              download all data created or updated within that period.
+            </li>
+            <li style={styles.instructionsItem}>
+              Click "Download Latest Snapshot" when ready and save the file to
+              your desired location.
+            </li>
+          </ol>
+        </div>
+        <div style={styles.warningText}>
+          <strong>Important:</strong> Do not save this data directly to your
+          RO-Crate folder. Only de-identified data should be stored in your
+          RO-Crate.
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [projectData, setProjectData] = useState([]);
   const [projectName, setProjectName] = useState("");
@@ -36,6 +147,7 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [dateRange, setDateRange] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     if (project) {
@@ -242,7 +354,14 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   return (
     <PageContainer>
       <HeaderSection>
-        <Title>{projectName} - Project Export</Title>
+        <div style={styles.titleContainer}>
+          <Title>{projectName} - Project Export</Title>
+          <HelpCircle
+            size={20}
+            style={styles.helpIcon}
+            onClick={() => setShowHelp(true)}
+          />
+        </div>
         {error && (
           <div style={{ color: "red", marginBottom: "1rem" }}>
             Error: {error}
@@ -320,6 +439,8 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
           </span>
         </DownloadButton>
       </Footer>
+
+      <HelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </PageContainer>
   );
 };
