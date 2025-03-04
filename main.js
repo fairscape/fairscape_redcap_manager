@@ -7,7 +7,7 @@ const archiver = require("archiver");
 // Create the main window
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
+    width: 1275,
     height: 800,
     webPreferences: {
       nodeIntegration: true,
