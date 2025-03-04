@@ -6,14 +6,15 @@ import styled from "@emotion/styled";
 
 const Container = styled.div`
   padding: 30px;
-  background-color: #282828;
+  background-color: white;
   border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  color: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  color: #333;
 `;
 
 const Title = styled.h2`
-  color: #ffffff;
+  color: #333;
   margin-bottom: 30px;
   text-align: center;
 `;
@@ -34,27 +35,39 @@ const ActionButton = styled(Button)`
   display: flex;
   align-items: center;
   gap: 8px;
+  background-color: #ebf5ff;
+  color: #1e40af;
+  &:hover {
+    background-color: #dbeafe;
+  }
+  &:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+  }
 `;
 
 const StatusContainer = styled.div`
   margin-top: 20px;
-  background-color: #3e3e3e;
+  background-color: #f9fafb;
   border-radius: 10px;
   padding: 20px;
-  color: #ffffff;
+  color: #333;
+  border: 1px solid #e5e7eb;
 `;
 
 const StatusTitle = styled.h3`
   margin-bottom: 15px;
+  color: #111827;
 `;
 
 const ProgressBarContainer = styled.div`
-  background-color: #282828;
+  background-color: #f3f4f6;
   border-radius: 25px;
   height: 50px;
   position: relative;
   overflow: hidden;
   margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
 `;
 
 const ProgressBar = styled.div`
@@ -84,19 +97,20 @@ const Step = styled.div`
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  color: ${(props) => (props.active ? "#ffffff" : "#aaaaaa")};
+  color: ${(props) => (props.active ? "#111827" : "#9ca3af")};
   z-index: 2;
 `;
 
 const OutputContainer = styled.div`
   margin-top: 20px;
   padding: 10px;
-  background-color: #3e3e3e;
+  background-color: #f9fafb;
   border-radius: 5px;
-  color: #ffffff;
+  color: #333;
   max-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
+  border: 1px solid #e5e7eb;
 `;
 
 const StatusDetails = styled.div`
@@ -104,7 +118,7 @@ const StatusDetails = styled.div`
 `;
 
 const Link = styled.a`
-  color: #007bff;
+  color: #1e40af;
   text-decoration: none;
   &:hover {
     text-decoration: underline;
