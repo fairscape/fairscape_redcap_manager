@@ -8,6 +8,7 @@ import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
 import DatasetForm from "./components/dataset/DatasetForm";
 import PreviewValidationView from "./components/PreviewValidationView";
 import DeidentificationVerificationView from "./components/deidentification/DeidentificationVerificationView";
+import PackageUploadView from "./components/PackageUploadView";
 import InitForm from "./components/InitForm";
 import { AppContainer, MainContent } from "./components/styles";
 
@@ -70,7 +71,8 @@ export default function App() {
         view === "preview" ||
         view === "deidentify" ||
         view === "upload" ||
-        view === "dataset-form")
+        view === "dataset-form" ||
+        view === "package")
     ) {
       setPendingView(view);
       showNotification("Please select a project first", "warning");
@@ -128,7 +130,7 @@ export default function App() {
       "De-identification verification completed successfully!",
       "success"
     );
-    handleViewChange("upload");
+    handleViewChange("package");
   };
 
   const updateProject = async (updatedProject) => {
@@ -148,6 +150,13 @@ export default function App() {
     localStorage.removeItem("authToken");
     setCurrentView("questionnaire"); // Reset to initial view
     showNotification("Logged out successfully", "info");
+  };
+
+  const handlePackageUploadComplete = () => {
+    showNotification(
+      "RO-Crate has been packaged and uploaded successfully!",
+      "success"
+    );
   };
 
   const renderContent = () => {
@@ -208,8 +217,13 @@ export default function App() {
             onVerificationComplete={handleDeidentificationComplete}
           />
         );
-      case "upload":
-        return <div>Upload view - to be implemented</div>;
+      case "package":
+        return (
+          <PackageUploadView
+            project={selectedProject}
+            onComplete={handlePackageUploadComplete}
+          />
+        );
       default:
         return <div>Content for {currentView}</div>;
     }

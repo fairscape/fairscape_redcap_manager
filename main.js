@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
-const fs = require("fs").promises;
+const fsPromises = require("fs").promises;
+const fs = require("fs"); // Regular fs for createWriteStream
+const archiver = require("archiver");
 
 // Create the main window
 function createWindow() {
@@ -25,7 +27,7 @@ const getProjectsPath = () => {
 async function loadProjects() {
   try {
     const projectsPath = getProjectsPath();
-    const data = await fs.readFile(projectsPath, "utf8");
+    const data = await fsPromises.readFile(projectsPath, "utf8");
     return JSON.parse(data);
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -38,7 +40,7 @@ async function loadProjects() {
 // Save projects to file
 async function saveProjects(projects) {
   const projectsPath = getProjectsPath();
-  await fs.writeFile(projectsPath, JSON.stringify(projects, null, 2));
+  await fsPromises.writeFile(projectsPath, JSON.stringify(projects, null, 2));
 }
 
 // IPC Handlers
@@ -46,7 +48,7 @@ ipcMain.handle("load-projects", loadProjects);
 
 ipcMain.handle("list-directory", async (_, { path: dirPath }) => {
   try {
-    const files = await fs.readdir(dirPath);
+    const files = await fsPromises.readdir(dirPath);
     return files;
   } catch (error) {
     console.error("Error listing directory:", error);
@@ -60,13 +62,11 @@ ipcMain.handle("save-project", async (_, project) => {
     let updatedProjects;
 
     if (project.id) {
-      // Update existing project
       updatedProjects = projects.map((p) =>
         p.id === project.id ? { ...p, ...project } : p
       );
     } else {
-      // Add new project
-      project.id = Date.now().toString(); // Simple ID generation
+      project.id = Date.now().toString();
       updatedProjects = [...projects, project];
     }
 
@@ -102,7 +102,7 @@ ipcMain.handle("open-directory-dialog", async () => {
 
 ipcMain.handle("check-file-exists", async (_, { path: filePath }) => {
   try {
-    await fs.access(filePath);
+    await fsPromises.access(filePath);
     return true;
   } catch {
     return false;
@@ -111,7 +111,7 @@ ipcMain.handle("check-file-exists", async (_, { path: filePath }) => {
 
 ipcMain.handle("read-file", async (_, { path: filePath, encoding }) => {
   try {
-    return await fs.readFile(filePath, { encoding });
+    return await fsPromises.readFile(filePath, { encoding });
   } catch (error) {
     console.error("Error reading file:", error);
     throw error;
@@ -134,7 +134,7 @@ ipcMain.handle("show-save-dialog", async (_, options) => {
 
 ipcMain.handle("save-file", async (_, { filePath, data }) => {
   try {
-    await fs.writeFile(filePath, data);
+    await fsPromises.writeFile(filePath, data);
     return true;
   } catch (error) {
     console.error("Error saving file:", error);
@@ -142,7 +142,41 @@ ipcMain.handle("save-file", async (_, { filePath, data }) => {
   }
 });
 
-// App lifecycle events
+ipcMain.handle("zip-rocrate", async (_, { sourcePath, targetPath }) => {
+  try {
+    const output = fs.createWriteStream(targetPath);
+    const archive = archiver("zip", {
+      zlib: { level: 9 },
+    });
+
+    return new Promise((resolve, reject) => {
+      output.on("close", () => {
+        resolve({ success: true, zipPath: targetPath });
+      });
+
+      archive.on("error", (err) => {
+        reject(err);
+      });
+
+      archive.pipe(output);
+      archive.directory(sourcePath, false);
+      archive.finalize();
+    });
+  } catch (error) {
+    console.error("Error zipping folder:", error);
+    throw error;
+  }
+});
+
+ipcMain.handle("read-file-as-buffer", async (_, filePath) => {
+  try {
+    return await fsPromises.readFile(filePath);
+  } catch (error) {
+    console.error("Error reading file as buffer:", error);
+    throw error;
+  }
+});
+
 app.whenReady().then(createWindow);
 
 app.on("window-all-closed", () => {

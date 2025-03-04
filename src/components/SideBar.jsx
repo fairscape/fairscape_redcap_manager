@@ -19,7 +19,6 @@ const UserProfileContainer = styled.div`
   width: 100%;
 `;
 
-
 const UserCircle = styled.div`
   width: 40px;
   height: 40px;
@@ -104,7 +103,7 @@ const sidebarItems = [
   },
   {
     text: "Package & Upload Data",
-    action: "upload",
+    action: "package",
   },
 ];
 
