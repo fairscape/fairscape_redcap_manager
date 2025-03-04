@@ -55,6 +55,10 @@ export const SidebarItem = styled.div`
   }
 `;
 
+export const SidebarFooter = styled.div`
+  margin-top: auto;
+`;
+
 export const ContentWrapper = styled.div`
   width: 100%;
   min-width: 0;

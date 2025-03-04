@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material";
 import { Snackbar, Alert } from "@mui/material";
 import SidebarComponent from "./components/SideBar";
@@ -33,11 +33,23 @@ export default function App() {
   const [deidentifiedFilePath, setDeidentifiedFilePath] = useState(null);
   const [pendingView, setPendingView] = useState(null);
   const [roCrateMetadata, setRoCrateMetadata] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+
+  useEffect(() => {
+    // Check for existing auth token on component mount
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      // You might want to validate the token here
+      setIsLoggedIn(true);
+      // You might want to fetch user data here based on the token
+    }
+  }, []);
 
   const showNotification = (message, severity = "success") => {
     setNotification({
@@ -123,6 +135,21 @@ export default function App() {
     setSelectedProject(updatedProject);
   };
 
+  const handleLogin = (data) => {
+    setIsLoggedIn(true);
+    setUserData(data);
+    localStorage.setItem("authToken", data.token);
+    showNotification("Login successful!", "success");
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserData(null);
+    localStorage.removeItem("authToken");
+    setCurrentView("questionnaire"); // Reset to initial view
+    showNotification("Logged out successfully", "info");
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case "questionnaire":
@@ -194,6 +221,10 @@ export default function App() {
         <SidebarComponent
           currentView={currentView}
           setCurrentView={handleViewChange}
+          isLoggedIn={isLoggedIn}
+          userData={userData}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
         />
         <MainContent>
           {renderContent()}
