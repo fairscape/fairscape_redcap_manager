@@ -10,6 +10,7 @@ import {
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
+import { Snackbar, Alert } from "@mui/material";
 
 import DeidentificationInstructions from "./DeidentificationInstructions";
 import DeidentificationErrors from "./DeidentificationErrors";
@@ -39,6 +40,22 @@ const DeidentificationVerificationContainer = ({
   const [registeredFiles, setRegisteredFiles] = useState([]);
   const [csvFiles, setCsvFiles] = useState([]);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showNotification = (message, severity = "success") => {
+    setNotification({
+      open: true,
+      message,
+      severity,
+    });
+    setTimeout(() => {
+      setNotification((prev) => ({ ...prev, open: false }));
+    }, 6000);
+  };
 
   useEffect(() => {
     const loadRocrateFiles = async () => {
@@ -177,6 +194,11 @@ const DeidentificationVerificationContainer = ({
       },
     ];
     setRegisteredFiles(updatedRegisteredFiles);
+
+    showNotification(
+      `${currentFileToRegister.filename} registered successfully! Register next file.`,
+      "success"
+    );
 
     const identifiedFields = project?.formData
       ? extractIdentifiedFields(project.formData)
@@ -407,6 +429,15 @@ const DeidentificationVerificationContainer = ({
           </div>
         </div>
       )}
+
+      <Snackbar
+        open={notification.open}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        autoHideDuration={6000}
+        onClose={() => setNotification((prev) => ({ ...prev, open: false }))}
+      >
+        <Alert severity={notification.severity}>{notification.message}</Alert>
+      </Snackbar>
     </ContentWrapper>
   );
 };

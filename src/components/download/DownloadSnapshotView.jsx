@@ -3,15 +3,9 @@ import { Download, HelpCircle, X } from "lucide-react";
 import { exportRecords } from "../../services/redcap-api";
 const { ipcRenderer } = window.require("electron");
 
-// Components
 import { FormCard } from "./components/FormCard";
 import { DateRangeSelector } from "./components/DateRangeSelector";
 
-//utils
-import { generateSchemaFromFormData } from "../../services/schema-generation";
-import { register_schema } from "@fairscape/utils";
-
-// Styled Components
 import {
   PageContainer,
   HeaderSection,
@@ -225,43 +219,6 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     setSelectedFields(newSelectedFields);
   };
 
-  const createAndRegisterSchema = async () => {
-    // Filter the project data to only include selected forms and fields
-    const filteredFormData = projectData
-      .filter((form) => selectedForms.has(form.form_name))
-      .map((form) => ({
-        ...form,
-        fields: form.fields.filter((field) =>
-          selectedFields.has(`${form.form_name}.${field.field_name}`)
-        ),
-      }));
-
-    // Generate the schema
-    const schema = generateSchemaFromFormData(
-      filteredFormData,
-      `${projectName} Export Schema`,
-      `Schema for selected fields from ${projectName} export`
-    );
-
-    try {
-      // Register the schema with the RO-crate
-      const schemaId = await register_schema(
-        project.rocratePath,
-        schema.name,
-        schema.description,
-        schema.properties,
-        schema.required,
-        schema.separator,
-        schema.header
-      );
-
-      return schemaId;
-    } catch (error) {
-      console.error("Error registering schema with RO-crate:", error);
-      throw new Error(`Failed to register schema: ${error.message}`);
-    }
-  };
-
   const generateFilename = () => {
     const timestamp = new Date().toISOString().slice(0, 10);
     const dateRangeStr =
@@ -321,7 +278,7 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
     setIsLoading(true);
     try {
       const options = {};
-      let schemaID = null;
+
       if (downloadMode === "date") {
         options.dateRangeBegin = dateRange.dateRangeBegin;
         options.dateRangeEnd = dateRange.dateRangeEnd;
@@ -334,15 +291,13 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
             return fieldName;
           });
         }
-        // Create and register schema for selected fields
-        schemaID = await createAndRegisterSchema();
       }
 
       const data = await exportRecords(project.url, project.token, options);
       const filename = generateFilename();
       const filePath = await downloadFile(data, filename);
 
-      onDownloadComplete(filePath, schemaID);
+      onDownloadComplete(filePath, null);
     } catch (error) {
       console.error("Download failed:", error);
       setError("Failed to download data: " + error.message);

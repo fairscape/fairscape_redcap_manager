@@ -101,9 +101,9 @@ export default function App() {
     }
     if (selectedProject?.rocrateMetadata) {
       setRoCrateMetadata(selectedProject.rocrateMetadata);
-      handleViewChange("dataset-form");
+      handleViewChange("preview");
       showNotification(
-        "File downloaded successfully! Please complete the dataset form.",
+        "File downloaded successfully! Please preview the download.",
         "success"
       );
     } else {
