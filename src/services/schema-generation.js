@@ -138,3 +138,112 @@ export function generateSchemaFromFormData(
   schema.parseFormData(formData);
   return schema;
 }
+
+import Papa from "papaparse";
+
+function findFieldInFormData(fieldName, formData) {
+  if (!formData || !Array.isArray(formData)) {
+    return null;
+  }
+
+  for (const form of formData) {
+    if (!form.fields || !Array.isArray(form.fields)) {
+      continue;
+    }
+
+    const field = form.fields.find((f) => f.field_name === fieldName);
+    if (field) {
+      return field;
+    }
+  }
+
+  return null;
+}
+
+export async function buildSchemaFromCSV(
+  filePath,
+  projectFormData,
+  projectName
+) {
+  try {
+    const { ipcRenderer } = window.require("electron");
+
+    const fileContent = await ipcRenderer.invoke("read-file", {
+      path: filePath,
+      encoding: "utf8",
+    });
+
+    const parsedCSV = Papa.parse(fileContent, {
+      header: true,
+      preview: 1,
+      skipEmptyLines: true,
+    });
+
+    const headers = parsedCSV.meta.fields || [];
+
+    const formData = [
+      {
+        form_name: "csv_import",
+        fields: headers.map((header) => {
+          const fieldInfo = findFieldInFormData(header, projectFormData);
+
+          if (fieldInfo) {
+            return fieldInfo;
+          } else {
+            return {
+              field_name: header,
+              form_name: "csv_import",
+              field_type: "text",
+              field_label: header,
+              required_field: "",
+              validation: "",
+            };
+          }
+        }),
+      },
+    ];
+
+    const schema = generateSchemaFromFormData(
+      formData,
+      `${projectName} CSV Schema`,
+      `Auto-generated schema for ${projectName} CSV data`
+    );
+
+    return schema;
+  } catch (error) {
+    console.error("Error building schema from CSV:", error);
+    throw error;
+  }
+}
+
+export async function generateAndRegisterSchemaFromCSV(
+  rocratePath,
+  filePath,
+  projectFormData,
+  projectName
+) {
+  try {
+    const schema = await buildSchemaFromCSV(
+      filePath,
+      projectFormData,
+      projectName
+    );
+
+    const { register_schema } = require("@fairscape/utils");
+
+    const schemaId = await register_schema(
+      rocratePath,
+      schema.name,
+      schema.description,
+      schema.properties,
+      schema.required,
+      ",",
+      true
+    );
+
+    return schemaId;
+  } catch (error) {
+    console.error("Error generating and registering schema:", error);
+    throw error;
+  }
+}

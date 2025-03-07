@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { register_dataset } from "@fairscape/utils";
+import { generateAndRegisterSchemaFromCSV } from "../../services/schema-generation";
 import {
   InitFormContainer,
   FormCard,
@@ -82,6 +83,26 @@ const DatasetForm = ({
     try {
       const rocratePath = project.rocratePath;
       const filepath = downloadedFile;
+      let finalSchemaId = formData.schema;
+
+      // Generate schema from CSV headers if no schema is provided
+      if (!finalSchemaId) {
+        try {
+          finalSchemaId = await generateAndRegisterSchemaFromCSV(
+            rocratePath,
+            filepath,
+            project.formData,
+            projectName
+          );
+        } catch (schemaError) {
+          console.error("Error generating schema:", schemaError);
+          setRegistrationError(
+            "Failed to generate schema: " + schemaError.message
+          );
+          setIsRegistering(false);
+          return;
+        }
+      }
 
       const keywordsArray = formData.keywords
         ? formData.keywords.split(",").map((keyword) => keyword.trim())
@@ -101,14 +122,14 @@ const DatasetForm = ({
         null,
         [],
         [],
-        formData.schema,
+        finalSchemaId,
         null,
         null
       );
 
       onSubmit({
         ...formData,
-        schema: schemaID,
+        schema: finalSchemaId,
         datasetId: datasetId,
       });
     } catch (error) {
@@ -229,6 +250,17 @@ const DatasetForm = ({
                     <TableCell>Schema ID</TableCell>
                     <TableCell>
                       <input type="text" value={schemaID} disabled />
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!schemaID && (
+                  <TableRow>
+                    <TableCell>Schema</TableCell>
+                    <TableCell>
+                      <div className="text-gray-600 italic">
+                        A schema will be automatically generated from CSV
+                        headers
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
