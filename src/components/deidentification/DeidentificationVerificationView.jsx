@@ -11,10 +11,10 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-// Import sub-components
 import DeidentificationInstructions from "./DeidentificationInstructions";
 import DeidentificationErrors from "./DeidentificationErrors";
 import DeidentificationChecklist from "./DeidentificationChecklist";
+import DatasetForm from "../dataset/DatasetForm";
 
 import { ContentWrapper, Title, ActionButton } from "../styles";
 import { VerificationContainer } from "./DeidentificationStyles";
@@ -23,7 +23,7 @@ const DeidentificationVerificationContainer = ({
   project,
   onVerificationComplete,
 }) => {
-  const [step, setStep] = useState("instructions"); // instructions, validating, errors, checklist
+  const [step, setStep] = useState("instructions");
   const [fileValidationResults, setFileValidationResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -35,9 +35,12 @@ const DeidentificationVerificationContainer = ({
   const [requirementsMet, setRequirementsMet] = useState({
     confirmedDeidentified: false,
   });
+  const [currentFileToRegister, setCurrentFileToRegister] = useState(null);
+  const [registeredFiles, setRegisteredFiles] = useState([]);
+  const [csvFiles, setCsvFiles] = useState([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
 
   useEffect(() => {
-    // Initially load the files in the RO-crate path
     const loadRocrateFiles = async () => {
       if (!project?.rocratePath) {
         console.warn("No RO-Crate path found in project");
@@ -49,7 +52,10 @@ const DeidentificationVerificationContainer = ({
         const files = await ipcRenderer.invoke("list-directory", {
           path: project.rocratePath,
         });
-        setRocrateFiles(files.filter((f) => f.toLowerCase().endsWith(".csv")));
+        const csvFilesFound = files.filter((f) =>
+          f.toLowerCase().endsWith(".csv")
+        );
+        setRocrateFiles(csvFilesFound);
       } catch (error) {
         console.error("Error listing RO-Crate directory:", error);
         setErrorMessage("Error checking RO-Crate contents");
@@ -72,100 +78,139 @@ const DeidentificationVerificationContainer = ({
       setFileValidationResults([]);
       setValidatedFileCount(0);
       setErrorMessage(null);
+      setRegisteredFiles([]);
+      setCurrentFileIndex(0);
 
-      // Filter for CSV files only
-      const csvFiles = rocrateFiles;
-      setTotalFilesToValidate(csvFiles.length);
+      const csvFilesFound = rocrateFiles;
+      setCsvFiles(csvFilesFound);
+      setTotalFilesToValidate(csvFilesFound.length);
 
-      if (csvFiles.length === 0) {
-        // No CSV files to validate, we can consider this passed
+      if (csvFilesFound.length === 0) {
         setStep("checklist");
         setIsLoading(false);
         return;
       }
 
-      // Extract identified fields if form data exists
       const identifiedFields = project?.formData
         ? extractIdentifiedFields(project.formData)
         : [];
 
-      // Store results for each file
-      const results = [];
-      let allPassed = true;
-      let hasIdentifiedColumns = false;
+      await validateNextFile(csvFilesFound, identifiedFields, 0, []);
+    } catch (error) {
+      console.error("Error during validation:", error);
+      setErrorMessage(`Error during validation: ${error.message}`);
+      setStep("instructions");
+      setIsLoading(false);
+    }
+  };
 
-      // Validate each CSV file
-      for (let i = 0; i < csvFiles.length; i++) {
-        const csvFile = csvFiles[i];
-        setCurrentFileBeingValidated(csvFile);
-        setValidatedFileCount(i);
-
-        try {
-          // Get the full path to the CSV file
-          const csvPath = `${project.rocratePath}/${csvFile}`;
-
-          // Run verification on the CSV file
-          const result = await verifyREDCapExport(csvPath, identifiedFields);
-
-          // Store the result with the filename
-          results.push({
-            filename: csvFile,
-            ...result,
-          });
-
-          // Track if all files have passed validation
-          if (!result.isDeidentified) {
-            allPassed = false;
-          }
-
-          // Check if any identified columns are present
-          if (result.presentIdentifiedColumns.length > 0) {
-            hasIdentifiedColumns = true;
-          }
-        } catch (error) {
-          console.error(`Error verifying file ${csvFile}:`, error);
-          results.push({
-            filename: csvFile,
-            isDeidentified: false,
-            error: error.message,
-            findings: [],
-            presentIdentifiedColumns: [],
-          });
-          allPassed = false;
-        }
-
-        // Small delay to make the UI more responsive and show progress
-        await new Promise((r) => setTimeout(r, 100));
-      }
-
-      setValidatedFileCount(csvFiles.length);
-
-      // Store the validation results
+  const validateNextFile = async (files, identifiedFields, index, results) => {
+    if (index >= files.length) {
       setFileValidationResults(results);
+      setValidatedFileCount(files.length);
 
-      // Determine next step based on validation results
+      const allPassed = results.every((result) => result.isDeidentified);
       if (allPassed) {
         setStep("checklist");
       } else {
         setStep("errors");
       }
-    } catch (error) {
-      console.error("Error during validation:", error);
-      setErrorMessage(`Error during validation: ${error.message}`);
-      setStep("instructions");
-    } finally {
+
       setIsLoading(false);
+      return;
+    }
+
+    const csvFile = files[index];
+    setCurrentFileBeingValidated(csvFile);
+    setValidatedFileCount(index);
+    setCurrentFileIndex(index);
+
+    try {
+      const csvPath = `${project.rocratePath}/${csvFile}`;
+
+      const result = await verifyREDCapExport(csvPath, identifiedFields);
+
+      const fileResult = {
+        filename: csvFile,
+        filePath: csvPath,
+        ...result,
+      };
+
+      const updatedResults = [...results, fileResult];
+      setFileValidationResults(updatedResults);
+
+      if (result.isDeidentified) {
+        setCurrentFileToRegister({
+          filename: csvFile,
+          filePath: csvPath,
+        });
+        setIsLoading(false);
+        setStep("dataset-form");
+      } else {
+        await new Promise((r) => setTimeout(r, 100));
+        validateNextFile(files, identifiedFields, index + 1, updatedResults);
+      }
+    } catch (error) {
+      console.error(`Error verifying file ${csvFile}:`, error);
+      const fileResult = {
+        filename: csvFile,
+        isDeidentified: false,
+        error: error.message,
+        findings: [],
+        presentIdentifiedColumns: [],
+      };
+
+      const updatedResults = [...results, fileResult];
+      setFileValidationResults(updatedResults);
+
+      await new Promise((r) => setTimeout(r, 100));
+      validateNextFile(files, identifiedFields, index + 1, updatedResults);
     }
   };
 
-  const handleRetry = async () => {
-    // Reset state and restart validation
-    setFileValidationResults([]);
+  const handleDatasetRegistered = (formData) => {
+    const updatedRegisteredFiles = [
+      ...registeredFiles,
+      {
+        ...currentFileToRegister,
+        metadata: formData,
+      },
+    ];
+    setRegisteredFiles(updatedRegisteredFiles);
 
-    // Return to instructions step to start fresh
+    const identifiedFields = project?.formData
+      ? extractIdentifiedFields(project.formData)
+      : [];
+
+    setIsLoading(true);
+    validateNextFile(
+      csvFiles,
+      identifiedFields,
+      currentFileIndex + 1,
+      fileValidationResults
+    );
+  };
+
+  const handleSkipRegistration = () => {
+    const identifiedFields = project?.formData
+      ? extractIdentifiedFields(project.formData)
+      : [];
+
+    setIsLoading(true);
+    validateNextFile(
+      csvFiles,
+      identifiedFields,
+      currentFileIndex + 1,
+      fileValidationResults
+    );
+  };
+
+  const handleRetry = async () => {
+    setFileValidationResults([]);
+    setRegisteredFiles([]);
+
     setStep("instructions");
 
-    // Re-load the files in case they've changed
     try {
       const files = await ipcRenderer.invoke("list-directory", {
         path: project.rocratePath,
@@ -178,12 +223,10 @@ const DeidentificationVerificationContainer = ({
   };
 
   const handleContinue = () => {
-    // Pass the validated RO-crate path
     onVerificationComplete(project.rocratePath);
   };
 
   const handleOverrideValidation = () => {
-    // User is overriding the validation check
     setStep("checklist");
   };
 
@@ -195,7 +238,6 @@ const DeidentificationVerificationContainer = ({
   };
 
   const hasOnlyPotentialPHI = () => {
-    // Check if there are no identified columns present, only potential PHI findings
     const hasIdentifiedColumns = fileValidationResults.some(
       (result) =>
         result.presentIdentifiedColumns &&
@@ -267,6 +309,22 @@ const DeidentificationVerificationContainer = ({
                 </div>
               </div>
             </div>
+          </div>
+        );
+      case "dataset-form":
+        return (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Register Dataset</h2>
+
+            <DatasetForm
+              downloadedFile={currentFileToRegister?.filePath}
+              metadata={project?.rocrateMetadata}
+              projectName={project?.name}
+              schemaID={null}
+              onSubmit={handleDatasetRegistered}
+              onBack={handleSkipRegistration}
+              project={project}
+            />
           </div>
         );
       case "errors":

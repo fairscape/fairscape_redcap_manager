@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { register_dataset } from "@fairscape/utils";
 import {
   InitFormContainer,
   FormCard,
@@ -22,7 +23,7 @@ const initialFormState = {
   description: "",
   keywords: "",
   dataFormat: "CSV",
-  schema: null, 
+  schema: null,
 };
 
 const DatasetForm = ({
@@ -32,12 +33,14 @@ const DatasetForm = ({
   onSubmit,
   onBack,
   schemaID,
+  project,
 }) => {
   const [formData, setFormData] = useState(initialFormState);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationError, setRegistrationError] = useState(null);
 
   useEffect(() => {
     if (metadata) {
-      // Pre-populate form with RO-Crate metadata if available
       setFormData((prev) => ({
         ...prev,
         name: metadata.name || `REDCap export of: ${projectName}`,
@@ -46,21 +49,19 @@ const DatasetForm = ({
         datePublished:
           metadata.datePublished || new Date().toISOString().split("T")[0],
         description: metadata.description || "",
-        // Check if metadata.keywords is an array before joining
         keywords: Array.isArray(metadata.keywords)
           ? metadata.keywords.join(", ")
           : metadata.keywords || "",
         dataFormat: "CSV",
-        schema: schemaID || null, // Include schema ID from props
+        schema: schemaID || null,
       }));
     } else {
-      // Set defaults if no metadata
       setFormData((prev) => ({
         ...prev,
         name: `REDCap export of: ${projectName}`,
         datePublished: new Date().toISOString().split("T")[0],
         dataFormat: "CSV",
-        schema: schemaID || null, // Include schema ID from props
+        schema: schemaID || null,
       }));
     }
   }, [metadata, projectName, schemaID]);
@@ -73,13 +74,49 @@ const DatasetForm = ({
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Pass the complete form data including the schema ID to onSubmit
-    onSubmit({
-      ...formData,
-      schema: schemaID, // Ensure schema ID is included in submission
-    });
+    setIsRegistering(true);
+    setRegistrationError(null);
+
+    try {
+      const rocratePath = project.rocratePath;
+      const filepath = downloadedFile;
+
+      const keywordsArray = formData.keywords
+        ? formData.keywords.split(",").map((keyword) => keyword.trim())
+        : [];
+
+      const datasetId = await register_dataset(
+        rocratePath,
+        formData.name,
+        formData.author,
+        formData.version,
+        formData.datePublished,
+        formData.description,
+        keywordsArray,
+        formData.dataFormat,
+        filepath,
+        null,
+        null,
+        [],
+        [],
+        formData.schema,
+        null,
+        null
+      );
+
+      onSubmit({
+        ...formData,
+        schema: schemaID,
+        datasetId: datasetId,
+      });
+    } catch (error) {
+      console.error("Error registering dataset:", error);
+      setRegistrationError(error.message || "Failed to register dataset");
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   return (
@@ -100,7 +137,7 @@ const DatasetForm = ({
                     <input
                       type="text"
                       name="name"
-                      value={`REDCap Export of: ${projectName}`}
+                      value={formData.name}
                       onChange={handleChange}
                       required
                     />
@@ -200,9 +237,21 @@ const DatasetForm = ({
           </TableContainer>
         </FormTableContainer>
 
+        {registrationError && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="flex items-start gap-2">
+              <div>{registrationError}</div>
+            </div>
+          </div>
+        )}
+
         <FormActions>
-          <ActionButton onClick={onBack}>Back</ActionButton>
-          <ActionButton onClick={handleSubmit}>Register Dataset</ActionButton>
+          <ActionButton onClick={onBack} disabled={isRegistering}>
+            Back
+          </ActionButton>
+          <ActionButton onClick={handleSubmit} disabled={isRegistering}>
+            {isRegistering ? "Registering..." : "Register Dataset"}
+          </ActionButton>
         </FormActions>
       </FormCard>
     </InitFormContainer>
