@@ -1,95 +1,17 @@
 import React from "react";
 import { ArrowRight, HelpCircle } from "lucide-react";
-import { ContentWrapper, FormCard, ActionButton, Title } from "./styles";
-import styled from "styled-components";
-
-const StepsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1.5rem;
-`;
-
-const StepCard = styled.div`
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-`;
-
-const StepNumber = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  background-color: #ebf5ff;
-  color: #1e40af;
-  border-radius: 50%;
-  font-weight: 600;
-  margin-right: 1rem;
-  flex-shrink: 0;
-`;
-
-const StepContent = styled.div`
-  flex: 1;
-`;
-
-const StepTitle = styled.h3`
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 0.5rem 0;
-`;
-
-const StepDescription = styled.p`
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 0;
-`;
-
-const IntroText = styled.p`
-  color: #4b5563;
-  margin-bottom: 2rem;
-`;
-
-const StepButton = styled(ActionButton)`
-  padding: 0.75rem 1rem;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const InstructionsBox = styled.div`
-  background: #eff6ff;
-  padding: 1.25rem;
-  border-radius: 0.5rem;
-  border: 1px solid #bfdbfe;
-  margin-top: 2rem;
-`;
-
-const InstructionsTitle = styled.h3`
-  font-weight: 500;
-  color: #1e40af;
-  margin: 0 0 0rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
-`;
+import { ContentWrapper, ActionButton, Title } from "../styles";
+import {
+  StepsContainer,
+  StepCard,
+  StepButton,
+  StepContent,
+  StepDescription,
+  StepNumber,
+  StepTitle,
+  InstructionsBox,
+  InstructionsTitle,
+} from "./optionsStyles";
 
 const QuestionnaireView = ({ setCurrentView, showNotification }) => {
   const steps = [

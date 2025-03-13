@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material";
 import { Snackbar, Alert } from "@mui/material";
 import SidebarComponent from "./components/SideBar";
-import QuestionnaireView from "./components/QuestionnaireView";
+import QuestionnaireView from "./components/optoins/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
 import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
 import DatasetForm from "./components/dataset/DatasetForm";
@@ -28,11 +28,8 @@ const theme = createTheme({
 export default function App() {
   const [currentView, setCurrentView] = useState("questionnaire");
   const [selectedProject, setSelectedProject] = useState(null);
-  const [selectedData, setSelectedData] = useState(null);
   const [downloadedFilePath, setDownloadedFilePath] = useState(null);
   const [downloadedschemaID, setDownloadedschemaID] = useState(null);
-  const [deidentifiedFilePath, setDeidentifiedFilePath] = useState(null);
-  const [pendingView, setPendingView] = useState(null);
   const [roCrateMetadata, setRoCrateMetadata] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -43,12 +40,9 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Check for existing auth token on component mount
     const token = localStorage.getItem("authToken");
     if (token) {
-      // You might want to validate the token here
       setIsLoggedIn(true);
-      // You might want to fetch user data here based on the token
     }
   }, []);
 
@@ -148,7 +142,6 @@ export default function App() {
     setIsLoggedIn(false);
     setUserData(null);
     localStorage.removeItem("authToken");
-    setCurrentView("questionnaire"); // Reset to initial view
     showNotification("Logged out successfully", "info");
   };
 
