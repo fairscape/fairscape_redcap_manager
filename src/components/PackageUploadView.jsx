@@ -140,8 +140,8 @@ const PackageUploadView = ({ project, onComplete }) => {
   const intervalRef = useRef(null);
 
   const { ipcRenderer } = window.require("electron");
-  const apiUrl = process.env.REACT_APP_API_URL || "https://fairscape.net/api";
-  const baseUrl = process.env.REACT_APP_BASE_URL || "https://fairscape.net";
+  const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
+  const baseUrl = process.env.REACT_APP_BASE_URL || "http://localhost:5713";
 
   const steps = ["Packaging", "Uploading", "Minting IDs", "Complete"];
 
