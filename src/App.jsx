@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material";
 import { Snackbar, Alert } from "@mui/material";
 import SidebarComponent from "./components/SideBar";
-import QuestionnaireView from "./components/optoins/QuestionnaireView";
+import QuestionnaireView from "./components/options/QuestionnaireView";
 import ManageProjectsView from "./components/ManageProjectsView";
 import DownloadSnapshotView from "./components/download/DownloadSnapshotView";
 import DatasetForm from "./components/dataset/DatasetForm";
