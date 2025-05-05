@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { register_dataset } from "@fairscape/utils";
+import {
+  register_dataset,
+  register_software,
+  register_computation,
+} from "@fairscape/utils";
 import { generateAndRegisterSchemaFromCSV } from "../../services/schema-generation";
 import {
   InitFormContainer,
@@ -16,10 +20,25 @@ import {
   ActionButton,
 } from "../FormStyles";
 
+const SOFTWARE_GUID = "ark:59852/software-fairscape-redcap-gui";
+const SOFTWARE_URL = "https://github.com/fairscape/fairscape_redcap_manager";
+const SOFTWARE_NAME = "Fairscape REDCap GUI";
+const SOFTWARE_AUTHOR = "Fairscape";
+const SOFTWARE_VERSION = "1.0.0";
+const SOFTWARE_DESCRIPTION =
+  "A graphical user interface application for managing REDCap data export, validation, de-identification, and packaging into RO-Crates for FAIRscape.";
+const SOFTWARE_KEYWORDS = [
+  "REDCap",
+  "FAIR",
+  "RO-Crate",
+  "GUI",
+  "Data Management",
+];
+
 const initialFormState = {
   name: "",
   author: "",
-  version: "",
+  version: "1.0",
   datePublished: "",
   description: "",
   keywords: "",
@@ -41,28 +60,39 @@ const DatasetForm = ({
   const [registrationError, setRegistrationError] = useState(null);
 
   useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
     if (metadata) {
       setFormData((prev) => ({
         ...prev,
-        name: metadata.name || `REDCap export of: ${projectName}`,
+        name:
+          metadata.name ||
+          `REDCap export for project: ${projectName || "Unknown"}`,
         author: metadata.author || "",
         version: metadata.version || "1.0",
-        datePublished:
-          metadata.datePublished || new Date().toISOString().split("T")[0],
-        description: metadata.description || "",
+        datePublished: metadata.datePublished || today,
+        description:
+          metadata.description ||
+          `Dataset exported from REDCap project '${
+            projectName || "Unknown"
+          }' via Fairscape REDCap GUI.`,
         keywords: Array.isArray(metadata.keywords)
           ? metadata.keywords.join(", ")
-          : metadata.keywords || "",
+          : metadata.keywords || "REDCap, Export",
         dataFormat: "CSV",
-        schema: schemaID || null,
+        schema: schemaID || prev.schema || null,
       }));
     } else {
       setFormData((prev) => ({
         ...prev,
-        name: `REDCap export of: ${projectName}`,
-        datePublished: new Date().toISOString().split("T")[0],
+        name: `REDCap export for project: ${projectName || "Unknown"}`,
+        author: "",
+        datePublished: today,
+        description: `Dataset exported from REDCap project '${
+          projectName || "Unknown"
+        }' via Fairscape REDCap GUI.`,
+        keywords: "REDCap, Export",
         dataFormat: "CSV",
-        schema: schemaID || null,
+        schema: schemaID || prev.schema || null,
       }));
     }
   }, [metadata, projectName, schemaID]);
@@ -77,6 +107,15 @@ const DatasetForm = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!project || !project.rocratePath) {
+      setRegistrationError("Project RO-Crate path is missing.");
+      return;
+    }
+    if (!downloadedFile) {
+      setRegistrationError("Downloaded file path is missing.");
+      return;
+    }
+
     setIsRegistering(true);
     setRegistrationError(null);
 
@@ -85,22 +124,33 @@ const DatasetForm = ({
       const filepath = downloadedFile;
       let finalSchemaId = formData.schema;
 
-      // Generate schema from CSV headers if no schema is provided
+      await register_software(
+        rocratePath,
+        SOFTWARE_NAME,
+        SOFTWARE_AUTHOR,
+        SOFTWARE_VERSION,
+        SOFTWARE_DESCRIPTION,
+        SOFTWARE_KEYWORDS,
+        null,
+        SOFTWARE_GUID,
+        SOFTWARE_URL,
+        new Date().toISOString()
+      );
+
       if (!finalSchemaId) {
+        console.log("No schema ID provided, attempting to generate...");
         try {
           finalSchemaId = await generateAndRegisterSchemaFromCSV(
             rocratePath,
             filepath,
-            project.formData,
-            projectName
+            projectName || "DefaultSchema",
+            `Schema auto-generated from CSV headers for ${projectName}`
           );
+          console.log("Generated Schema ID:", finalSchemaId);
+          setFormData((prev) => ({ ...prev, schema: finalSchemaId }));
         } catch (schemaError) {
           console.error("Error generating schema:", schemaError);
-          setRegistrationError(
-            "Failed to generate schema: " + schemaError.message
-          );
-          setIsRegistering(false);
-          return;
+          throw new Error(`Failed to generate schema: ${schemaError.message}`);
         }
       }
 
@@ -122,19 +172,43 @@ const DatasetForm = ({
         null,
         [],
         [],
-        finalSchemaId,
-        null,
-        null
+        finalSchemaId
       );
+      console.log("Registered Dataset ID:", datasetId);
+
+      const computationName = `REDCap Data Export for ${
+        projectName || "Unknown Project"
+      }`;
+      const computationDescription = `Execution of data export from REDCap project '${
+        projectName || "Unknown Project"
+      }' using the ${SOFTWARE_NAME}.`;
+      const computationDate = new Date().toISOString();
+
+      const computationId = await register_computation(
+        rocratePath,
+        computationName,
+        SOFTWARE_URL,
+        computationDate,
+        computationDescription,
+        ["REDCap", "Data Export", "FAIRscape"],
+        null,
+        null,
+        [{ "@id": SOFTWARE_GUID }],
+        [],
+        [{ "@id": datasetId }]
+      );
+      console.log("Registered Computation ID:", computationId);
 
       onSubmit({
         ...formData,
         schema: finalSchemaId,
         datasetId: datasetId,
+        computationId: computationId,
+        softwareId: SOFTWARE_GUID,
       });
     } catch (error) {
-      console.error("Error registering dataset:", error);
-      setRegistrationError(error.message || "Failed to register dataset");
+      console.error("Error during registration process:", error);
+      setRegistrationError(error.message || "Failed to register entities");
     } finally {
       setIsRegistering(false);
     }
@@ -144,8 +218,12 @@ const DatasetForm = ({
     <InitFormContainer>
       <FormCard>
         <FormHeader>
-          <FormTitle>Register Dataset</FormTitle>
-          <span>File: {downloadedFile}</span>
+          <FormTitle>Register Exported Dataset</FormTitle>
+          {downloadedFile && (
+            <span>
+              File: {downloadedFile.split(/[\\/]/).pop() || downloadedFile}
+            </span>
+          )}
         </FormHeader>
 
         <FormTableContainer>
@@ -161,6 +239,7 @@ const DatasetForm = ({
                       value={formData.name}
                       onChange={handleChange}
                       required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </TableCell>
                 </TableRow>
@@ -173,14 +252,14 @@ const DatasetForm = ({
                       name="author"
                       value={formData.author}
                       onChange={handleChange}
-                      required
-                      placeholder="Separate multiple authors with commas"
+                      placeholder="Creator(s) of the dataset instance"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </TableCell>
                 </TableRow>
 
                 <TableRow>
-                  <TableCell>Version</TableCell>
+                  <TableCell>Dataset Version</TableCell>
                   <TableCell>
                     <input
                       type="text"
@@ -188,6 +267,7 @@ const DatasetForm = ({
                       value={formData.version}
                       onChange={handleChange}
                       required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </TableCell>
                 </TableRow>
@@ -201,6 +281,7 @@ const DatasetForm = ({
                       value={formData.datePublished}
                       onChange={handleChange}
                       required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </TableCell>
                 </TableRow>
@@ -214,6 +295,7 @@ const DatasetForm = ({
                       onChange={handleChange}
                       required
                       rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </TableCell>
                 </TableRow>
@@ -227,6 +309,7 @@ const DatasetForm = ({
                       value={formData.keywords}
                       onChange={handleChange}
                       placeholder="Separate keywords with commas"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </TableCell>
                 </TableRow>
@@ -238,51 +321,58 @@ const DatasetForm = ({
                       type="text"
                       name="dataFormat"
                       value={formData.dataFormat}
-                      onChange={handleChange}
-                      required
-                      disabled
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none sm:text-sm text-gray-500"
                     />
                   </TableCell>
                 </TableRow>
 
-                {schemaID && (
-                  <TableRow>
-                    <TableCell>Schema ID</TableCell>
-                    <TableCell>
-                      <input type="text" value={schemaID} disabled />
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!schemaID && (
-                  <TableRow>
-                    <TableCell>Schema</TableCell>
-                    <TableCell>
-                      <div className="text-gray-600 italic">
-                        A schema will be automatically generated from CSV
-                        headers
+                <TableRow>
+                  <TableCell>Schema</TableCell>
+                  <TableCell>
+                    {formData.schema ? (
+                      <input
+                        type="text"
+                        value={formData.schema}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none sm:text-sm text-gray-500"
+                        title="Schema ID used for this dataset"
+                      />
+                    ) : (
+                      <div className="text-gray-600 italic py-2">
+                        No schema provided; will be auto-generated from CSV
+                        headers.
                       </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+                    )}
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </TableContainer>
         </FormTableContainer>
 
         {registrationError && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            <div className="flex items-start gap-2">
-              <div>{registrationError}</div>
-            </div>
+          <div className="mt-4 p-3 bg-red-100 border border-red-400 rounded-lg text-red-700 text-sm">
+            <strong>Error:</strong> {registrationError}
           </div>
         )}
 
         <FormActions>
-          <ActionButton onClick={onBack} disabled={isRegistering}>
+          <ActionButton
+            type="button"
+            onClick={onBack}
+            disabled={isRegistering}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
+          >
             Back
           </ActionButton>
-          <ActionButton onClick={handleSubmit} disabled={isRegistering}>
-            {isRegistering ? "Registering..." : "Register Dataset"}
+          <ActionButton
+            type="submit"
+            onClick={handleSubmit}
+            disabled={isRegistering || !downloadedFile || !project?.rocratePath}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRegistering ? "Registering..." : "Register Dataset & Provenance"}
           </ActionButton>
         </FormActions>
       </FormCard>
