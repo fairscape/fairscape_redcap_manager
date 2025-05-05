@@ -28,11 +28,14 @@ export const Sidebar = styled.div`
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative; /* Added */
 `;
 
 export const Logo = styled.div`
   margin-bottom: 20px;
   text-align: center;
+  flex-shrink: 0; /* Prevent logo from shrinking */
   img {
     max-width: 100%;
     height: auto;
@@ -40,7 +43,10 @@ export const Logo = styled.div`
 `;
 
 export const SidebarContent = styled.div`
-  flex: 1;
+  flex: 1; /* Allow content to take available space */
+  overflow-y: auto; /* Allow content scrolling if needed */
+  min-height: 0; /* Important for flex children with overflow */
+  box-sizing: border-box;
 `;
 
 export const SidebarItem = styled.div`
@@ -56,12 +62,17 @@ export const SidebarItem = styled.div`
 `;
 
 export const SidebarFooter = styled.div`
-  margin-top: auto;
+  margin-top: auto; /* Push footer to the bottom */
+  flex-shrink: 0; /* Prevent footer from shrinking */
+  box-sizing: border-box;
 `;
+
+// Other Components (Assuming these are okay, but added box-sizing for robustness)
 
 export const ContentWrapper = styled.div`
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 `;
 
 export const CardContent = styled.div`
@@ -70,11 +81,13 @@ export const CardContent = styled.div`
   align-items: center;
   width: 100%;
   gap: 2rem;
+  box-sizing: border-box;
 `;
 
 export const TextContent = styled.div`
   flex: 1;
   text-align: left;
+  box-sizing: border-box;
 `;
 
 export const TableContainer = styled.div`
@@ -111,12 +124,14 @@ export const TableRow = styled.tr``;
 export const TableCell = styled.td`
   padding: 16px;
   border-bottom: 1px solid #eee;
+  box-sizing: border-box;
 
   input {
     width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    box-sizing: border-box;
     &:focus {
       outline: none;
       border-color: ${(props) => props.theme.accentColor || "#007bff"};
@@ -128,6 +143,7 @@ export const TableHeaderCell = styled.th`
   padding: 16px;
   font-weight: bold;
   text-align: ${(props) => props.align || "left"};
+  box-sizing: border-box;
 `;
 
 export const ActionButton = styled.button`
@@ -144,6 +160,7 @@ export const ActionButton = styled.button`
   align-items: center;
   justify-content: center;
   font-weight: 500;
+  box-sizing: border-box;
 
   &:hover {
     background-color: #dbeafe;
@@ -168,9 +185,11 @@ export const StyledCard = styled(Card)`
   border-radius: 4px;
   border: 1px solid #444;
   width: 100%;
+  box-sizing: border-box;
 
   .card-body {
     padding: 1.25rem;
+    box-sizing: border-box;
   }
 
   h3 {
@@ -196,6 +215,7 @@ export const StyledCard = styled(Card)`
     transition: background-color 0.2s;
     min-width: 100px;
     font-weight: 500;
+    box-sizing: border-box;
 
     &:hover {
       background-color: #dbeafe;
