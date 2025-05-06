@@ -63,7 +63,7 @@ function LoginComponent({ onLogin }) {
 
   useEffect(() => {
     // Set the API URL from environment variable
-    setApiUrl(process.env.REACT_APP_API_URL || "https://fairscape.net/api");
+    setApiUrl(process.env.REACT_APP_API_URL || "http://localhost:8080/api");
   }, []);
 
   const handleSubmit = async (e) => {

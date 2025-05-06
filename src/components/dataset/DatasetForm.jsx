@@ -137,8 +137,30 @@ const DatasetForm = ({
         new Date().toISOString()
       );
 
+      const computationName = `REDCap Data Export for ${
+        projectName || "Unknown Project"
+      }`;
+      const computationDescription = `Execution of data export from REDCap project '${
+        projectName || "Unknown Project"
+      }' using the ${SOFTWARE_NAME}.`;
+      const computationDate = new Date().toISOString();
+
+      const computationId = await register_computation(
+        rocratePath,
+        computationName,
+        SOFTWARE_URL,
+        computationDate,
+        computationDescription,
+        ["REDCap", "Data Export", "FAIRscape"],
+        null,
+        null,
+        [{ "@id": SOFTWARE_GUID }],
+        [],
+        []
+      );
+      console.log("Registered Computation ID:", computationId);
+
       if (!finalSchemaId) {
-        console.log("No schema ID provided, attempting to generate...");
         try {
           finalSchemaId = await generateAndRegisterSchemaFromCSV(
             rocratePath,
@@ -146,7 +168,6 @@ const DatasetForm = ({
             projectName || "DefaultSchema",
             `Schema auto-generated from CSV headers for ${projectName}`
           );
-          console.log("Generated Schema ID:", finalSchemaId);
           setFormData((prev) => ({ ...prev, schema: finalSchemaId }));
         } catch (schemaError) {
           console.error("Error generating schema:", schemaError);
@@ -172,32 +193,12 @@ const DatasetForm = ({
         null,
         [],
         [],
-        finalSchemaId
+        finalSchemaId,
+        null,
+        null,
+        { "@id": computationId }
       );
       console.log("Registered Dataset ID:", datasetId);
-
-      const computationName = `REDCap Data Export for ${
-        projectName || "Unknown Project"
-      }`;
-      const computationDescription = `Execution of data export from REDCap project '${
-        projectName || "Unknown Project"
-      }' using the ${SOFTWARE_NAME}.`;
-      const computationDate = new Date().toISOString();
-
-      const computationId = await register_computation(
-        rocratePath,
-        computationName,
-        SOFTWARE_URL,
-        computationDate,
-        computationDescription,
-        ["REDCap", "Data Export", "FAIRscape"],
-        null,
-        null,
-        [{ "@id": SOFTWARE_GUID }],
-        [],
-        [{ "@id": datasetId }]
-      );
-      console.log("Registered Computation ID:", computationId);
 
       onSubmit({
         ...formData,

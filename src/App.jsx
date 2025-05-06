@@ -119,7 +119,6 @@ export default function App() {
   };
 
   const handleDeidentificationComplete = (filePath) => {
-    setDeidentifiedFilePath(filePath);
     showNotification(
       "De-identification verification completed successfully!",
       "success"

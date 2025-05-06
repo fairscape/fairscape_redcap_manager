@@ -155,16 +155,24 @@ ipcMain.handle("zip-rocrate", async (_, { sourcePath, targetPath }) => {
       });
 
       archive.on("error", (err) => {
+        console.error("Archiver error:", err); // Log archiver errors
         reject(err);
       });
 
       archive.pipe(output);
-      archive.directory(sourcePath, false);
+
+      // Get the name of the source directory
+      const folderName = path.basename(sourcePath);
+
+      // Add the directory contents into a folder named after the source directory within the zip
+      archive.directory(sourcePath, folderName); // <--- Changed from 'false'
+
       archive.finalize();
     });
   } catch (error) {
     console.error("Error zipping folder:", error);
-    throw error;
+    // Ensure the promise is rejected if an error occurs outside the archiver events
+    throw error; // Re-throw the error so the handle catches it
   }
 });
 
