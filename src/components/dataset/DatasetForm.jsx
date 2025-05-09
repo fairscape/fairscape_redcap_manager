@@ -1,3 +1,4 @@
+// DatasetForm.jsx
 import React, { useState, useEffect } from "react";
 import {
   register_dataset,
@@ -42,8 +43,8 @@ const initialFormState = {
   datePublished: "",
   description: "",
   keywords: "",
-  dataFormat: "CSV",
-  schema: null,
+  format: "CSV",
+  "evi:Schema": null,
 };
 
 const DatasetForm = ({
@@ -61,38 +62,40 @@ const DatasetForm = ({
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
+    const baseName = `REDCap export for project: ${projectName || "Unknown"}`;
+    const baseDescription = `Dataset exported from REDCap project '${
+      projectName || "Unknown"
+    }' via Fairscape REDCap GUI.`;
+    const baseKeywords = "REDCap, Export";
+
     if (metadata) {
       setFormData((prev) => ({
         ...prev,
-        name:
-          metadata.name ||
-          `REDCap export for project: ${projectName || "Unknown"}`,
+        name: metadata.name || baseName,
         author: metadata.author || "",
         version: metadata.version || "1.0",
         datePublished: metadata.datePublished || today,
-        description:
-          metadata.description ||
-          `Dataset exported from REDCap project '${
-            projectName || "Unknown"
-          }' via Fairscape REDCap GUI.`,
+        description: metadata.description || baseDescription,
         keywords: Array.isArray(metadata.keywords)
           ? metadata.keywords.join(", ")
-          : metadata.keywords || "REDCap, Export",
-        dataFormat: "CSV",
-        schema: schemaID || prev.schema || null,
+          : metadata.keywords || baseKeywords,
+        format: "CSV",
+        "evi:Schema": schemaID
+          ? { "@id": schemaID }
+          : prev["evi:Schema"] || null,
       }));
     } else {
       setFormData((prev) => ({
         ...prev,
-        name: `REDCap export for project: ${projectName || "Unknown"}`,
+        name: baseName,
         author: "",
         datePublished: today,
-        description: `Dataset exported from REDCap project '${
-          projectName || "Unknown"
-        }' via Fairscape REDCap GUI.`,
-        keywords: "REDCap, Export",
-        dataFormat: "CSV",
-        schema: schemaID || prev.schema || null,
+        description: baseDescription,
+        keywords: baseKeywords,
+        format: "CSV",
+        "evi:Schema": schemaID
+          ? { "@id": schemaID }
+          : prev["evi:Schema"] || null,
       }));
     }
   }, [metadata, projectName, schemaID]);
@@ -112,7 +115,9 @@ const DatasetForm = ({
       return;
     }
     if (!downloadedFile) {
-      setRegistrationError("Downloaded file path is missing.");
+      setRegistrationError(
+        "Downloaded file path (dataset filepath) is missing."
+      );
       return;
     }
 
@@ -121,88 +126,89 @@ const DatasetForm = ({
 
     try {
       const rocratePath = project.rocratePath;
-      const filepath = downloadedFile;
-      let finalSchemaId = formData.schema;
+      const datasetFilepath = downloadedFile;
 
-      await register_software(
-        rocratePath,
-        SOFTWARE_NAME,
-        SOFTWARE_AUTHOR,
-        SOFTWARE_VERSION,
-        SOFTWARE_DESCRIPTION,
-        SOFTWARE_KEYWORDS,
-        null,
-        SOFTWARE_GUID,
-        SOFTWARE_URL,
-        new Date().toISOString()
-      );
+      // 1. Register Software
+      const softwareParams = {
+        "@id": SOFTWARE_GUID,
+        name: SOFTWARE_NAME,
+        author: SOFTWARE_AUTHOR,
+        version: SOFTWARE_VERSION,
+        description: SOFTWARE_DESCRIPTION,
+        keywords: SOFTWARE_KEYWORDS,
+        url: SOFTWARE_URL,
+        format: "Electron",
+        dateModified: new Date().toISOString().split("T")[0],
+      };
 
-      const computationName = `REDCap Data Export for ${
-        projectName || "Unknown Project"
-      }`;
-      const computationDescription = `Execution of data export from REDCap project '${
-        projectName || "Unknown Project"
-      }' using the ${SOFTWARE_NAME}.`;
-      const computationDate = new Date().toISOString();
+      await register_software(rocratePath, softwareParams);
+
+      // 2. Register Computation
+      const computationParams = {
+        name: `REDCap Data Export for ${projectName || "Unknown Project"}`,
+        runBy: SOFTWARE_URL,
+        dateCreated: new Date().toISOString().split("T")[0],
+        description: `Execution of data export from REDCap project '${
+          projectName || "Unknown Project"
+        }' using the ${SOFTWARE_NAME}.`,
+        keywords: ["REDCap", "Data Export", "FAIRSCAPE"],
+        usedSoftware: [{ "@id": SOFTWARE_GUID }],
+      };
 
       const computationId = await register_computation(
         rocratePath,
-        computationName,
-        SOFTWARE_URL,
-        computationDate,
-        computationDescription,
-        ["REDCap", "Data Export", "FAIRscape"],
-        null,
-        null,
-        [{ "@id": SOFTWARE_GUID }],
-        [],
-        []
+        computationParams
       );
-      console.log("Registered Computation ID:", computationId);
 
-      if (!finalSchemaId) {
+      let finalSchemaObject = formData["evi:Schema"];
+
+      if (!finalSchemaObject || !finalSchemaObject["@id"]) {
         try {
-          finalSchemaId = await generateAndRegisterSchemaFromCSV(
-            rocratePath,
-            filepath,
-            projectName || "DefaultSchema",
-            `Schema auto-generated from CSV headers for ${projectName}`
-          );
-          setFormData((prev) => ({ ...prev, schema: finalSchemaId }));
+          const generatedSchemaIdString =
+            await generateAndRegisterSchemaFromCSV(
+              rocratePath,
+              datasetFilepath,
+              projectName || "DefaultSchema",
+              `Schema auto-generated from CSV headers for ${
+                projectName || "Unknown Project"
+              }`
+            );
+          finalSchemaObject = { "@id": generatedSchemaIdString };
+          setFormData((prev) => ({ ...prev, "evi:Schema": finalSchemaObject }));
         } catch (schemaError) {
           console.error("Error generating schema:", schemaError);
           throw new Error(`Failed to generate schema: ${schemaError.message}`);
         }
       }
 
+      // 4. Register Dataset
       const keywordsArray = formData.keywords
         ? formData.keywords.split(",").map((keyword) => keyword.trim())
         : [];
 
+      let datasetAuthor = formData.author;
+
+      const datasetParams = {
+        name: formData.name,
+        author: datasetAuthor,
+        version: formData.version,
+        datePublished: formData.datePublished,
+        description: formData.description,
+        keywords: keywordsArray,
+        format: formData.format,
+        "evi:Schema": finalSchemaObject,
+        generatedBy: [{ "@id": computationId }],
+      };
+
       const datasetId = await register_dataset(
         rocratePath,
-        formData.name,
-        formData.author,
-        formData.version,
-        formData.datePublished,
-        formData.description,
-        keywordsArray,
-        formData.dataFormat,
-        filepath,
-        null,
-        null,
-        [],
-        [],
-        finalSchemaId,
-        null,
-        null,
-        { "@id": computationId }
+        datasetParams,
+        datasetFilepath
       );
-      console.log("Registered Dataset ID:", datasetId);
 
       onSubmit({
         ...formData,
-        schema: finalSchemaId,
+        "evi:Schema": finalSchemaObject,
         datasetId: datasetId,
         computationId: computationId,
         softwareId: SOFTWARE_GUID,
@@ -320,8 +326,8 @@ const DatasetForm = ({
                   <TableCell>
                     <input
                       type="text"
-                      name="dataFormat"
-                      value={formData.dataFormat}
+                      name="format" // Changed from dataFormat to match schema key if desired
+                      value={formData.format} // Ensure this matches state key
                       readOnly
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none sm:text-sm text-gray-500"
                     />
@@ -331,10 +337,10 @@ const DatasetForm = ({
                 <TableRow>
                   <TableCell>Schema</TableCell>
                   <TableCell>
-                    {formData.schema ? (
+                    {formData["evi:Schema"] && formData["evi:Schema"]["@id"] ? (
                       <input
                         type="text"
-                        value={formData.schema}
+                        value={formData["evi:Schema"]["@id"]} // Display the @id part
                         readOnly
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none sm:text-sm text-gray-500"
                         title="Schema ID used for this dataset"
@@ -369,7 +375,7 @@ const DatasetForm = ({
           </ActionButton>
           <ActionButton
             type="submit"
-            onClick={handleSubmit}
+            onClick={handleSubmit} // This will be triggered by the form's onSubmit
             disabled={isRegistering || !downloadedFile || !project?.rocratePath}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >

@@ -166,14 +166,14 @@ function InitForm({ onSuccess, selectedProject, updateProject }) {
       await rocrate_create(
         formData.cratePath,
         formData.name,
-        organization?.guid || null,
-        project?.guid || null,
         formData.description,
-        formData.author,
         formData.keywords,
-        "pipeline",
+        formData.author,
+        formData.license,
+        "1.0.0",
         guid,
-        formData.license
+        organization?.guid || null,
+        project?.guid || null
       );
 
       try {
