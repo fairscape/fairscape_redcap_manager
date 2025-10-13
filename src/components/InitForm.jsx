@@ -22,10 +22,18 @@ import {
 } from "./FormStyles";
 
 const LICENSE_OPTIONS = [
+  {
+    label: "CC BY-NC-SA 4.0",
+    value: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  },
   { label: "MIT License", value: "https://opensource.org/licenses/MIT" },
   {
     label: "Apache License 2.0",
     value: "https://opensource.org/licenses/Apache-2.0",
+  },
+  {
+    label: "CC0 1.0",
+    value: "https://creativecommons.org/publicdomain/zero/1.0/",
   },
   { label: "CC BY 4.0", value: "https://creativecommons.org/licenses/by/4.0/" },
   {
@@ -37,9 +45,27 @@ const LICENSE_OPTIONS = [
     value: "https://creativecommons.org/licenses/by-nc/4.0/",
   },
   {
-    label: "CC0 1.0",
-    value: "https://creativecommons.org/publicdomain/zero/1.0/",
+    label: "CC BY-ND 4.0",
+    value: "https://creativecommons.org/licenses/by-nd/4.0/",
   },
+  {
+    label: "CC BY-NC-ND 4.0",
+    value: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+  },
+  { label: "GPL v3.0", value: "https://www.gnu.org/licenses/gpl-3.0.html" },
+  { label: "LGPL v3.0", value: "https://www.gnu.org/licenses/lgpl-3.0.html" },
+  { label: "AGPL v3.0", value: "https://www.gnu.org/licenses/agpl-3.0.html" },
+  {
+    label: "BSD 2-Clause",
+    value: "https://opensource.org/licenses/BSD-2-Clause",
+  },
+  {
+    label: "BSD 3-Clause",
+    value: "https://opensource.org/licenses/BSD-3-Clause",
+  },
+  { label: "ISC License", value: "https://opensource.org/licenses/ISC" },
+  { label: "MPL 2.0", value: "https://opensource.org/licenses/MPL-2.0" },
+  { label: "Unlicense", value: "https://unlicense.org/" },
 ];
 
 const organizations = [
@@ -109,7 +135,7 @@ function InitForm({ onSuccess, selectedProject, updateProject }) {
   };
 
   const generateGuid = (name) => {
-    const NAAN = "59852";
+    const NAAN = "59853";
     const sq = new Date()
       .toISOString()
       .replace(/[-:]/g, "")
@@ -117,7 +143,7 @@ function InitForm({ onSuccess, selectedProject, updateProject }) {
       .slice(0, 14);
     return `ark:${NAAN}/rocrate-${name
       .toLowerCase()
-      .replace(/\s+/g, "-")}-${sq}/`;
+      .replace(/\s+/g, "-")}-${sq}`;
   };
 
   const checkForExistingMetadata = async () => {

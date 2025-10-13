@@ -18,10 +18,6 @@ class DataProperty {
 
 class REDCapSchema {
   constructor({ name, description }) {
-    this["@context"] = {
-      "@vocab": "https://schema.org/",
-      evi: "https://w3id.org/EVI#",
-    };
     this["@type"] = "EVI:Schema";
     this.name = name;
     this.description = description;
