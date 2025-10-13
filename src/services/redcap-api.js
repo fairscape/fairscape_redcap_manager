@@ -1,5 +1,3 @@
-// src/services/redcap-api.js
-
 export const exportProjectInfo = async (apiUrl, token) => {
   if (!apiUrl || !token) {
     throw new Error("API URL and token are required");
@@ -50,11 +48,9 @@ export const exportMetadata = async (apiUrl, token) => {
 
     const metadata = await response.json();
 
-    // Transform metadata into grouped form structure
     const formGroups = metadata.reduce((forms, field) => {
       const formName = field.form_name;
 
-      // Initialize form group if it doesn't exist
       if (!forms[formName]) {
         forms[formName] = {
           form_name: formName,
@@ -62,10 +58,8 @@ export const exportMetadata = async (apiUrl, token) => {
         };
       }
 
-      // Function to extract clean text from HTML content
       const extractTextFromHtml = (html) => {
         try {
-          // If it doesn't look like HTML, return as is
           if (!html.includes("<")) {
             return html;
           }
@@ -73,7 +67,6 @@ export const exportMetadata = async (apiUrl, token) => {
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, "text/html");
 
-          // Get all text nodes recursively
           const walker = document.createTreeWalker(
             doc.body,
             NodeFilter.SHOW_TEXT,
@@ -85,7 +78,6 @@ export const exportMetadata = async (apiUrl, token) => {
           let node;
 
           while ((node = walker.nextNode())) {
-            // Skip text in italics (usually supplementary info)
             if (
               !node.parentElement.closest("em") &&
               !node.parentElement.closest("i")
@@ -101,7 +93,6 @@ export const exportMetadata = async (apiUrl, token) => {
         }
       };
 
-      // Transform field data to match expected format
       const processedField = {
         field_name: field.field_name,
         field_type: field.field_type,
@@ -139,12 +130,10 @@ export const exportMetadata = async (apiUrl, token) => {
 };
 
 export const exportRecords = async (apiUrl, token, options = {}) => {
-  // Validate required parameters
   if (!apiUrl || !token) {
     throw new Error("API URL and token are required");
   }
 
-  // Create form data for the POST request
   const formData = new FormData();
   formData.append("token", token);
   formData.append("content", "record");
@@ -152,22 +141,23 @@ export const exportRecords = async (apiUrl, token, options = {}) => {
   formData.append("type", "flat");
   formData.append("returnFormat", "json");
 
-  // Add optional fields if provided
   if (options.fields && Array.isArray(options.fields)) {
-    formData.append("fields", JSON.stringify(options.fields));
+    options.fields.forEach((field, index) => {
+      formData.append(`fields[${index}]`, field);
+    });
   }
 
-  // Add optional forms if provided
   if (options.forms && Array.isArray(options.forms)) {
-    formData.append("forms", JSON.stringify(options.forms));
+    options.forms.forEach((form, index) => {
+      formData.append(`forms[${index}]`, form);
+    });
   }
 
-  // Add date range if provided
   if (options.dateRangeBegin) {
-    formData.append("dateRangeBegin", options.dateRangeBegin);
+    formData.append("dateRangeBegin", `${options.dateRangeBegin} 00:00:00`);
   }
   if (options.dateRangeEnd) {
-    formData.append("dateRangeEnd", options.dateRangeEnd);
+    formData.append("dateRangeEnd", `${options.dateRangeEnd} 23:59:59`);
   }
 
   try {
