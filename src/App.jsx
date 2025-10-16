@@ -10,6 +10,7 @@ import PreviewValidationView from "./components/PreviewValidationView";
 import DeidentificationVerificationView from "./components/deidentification/DeidentificationVerificationView";
 import PackageUploadView from "./components/PackageUploadView";
 import InitForm from "./components/InitForm";
+import ApiInstructionsView from "./components/ApiInstructionsView";
 import { AppContainer, MainContent } from "./components/styles";
 
 const theme = createTheme({
@@ -167,6 +168,8 @@ export default function App() {
             onProjectSelect={handleProjectSelect}
           />
         );
+      case "api-instructions":
+        return <ApiInstructionsView setCurrentView={setCurrentView} />;
       case "init-crate":
         return (
           <InitForm

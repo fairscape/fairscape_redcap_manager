@@ -1,10 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fsPromises = require("fs").promises;
-const fs = require("fs"); // Regular fs for createWriteStream
+const fs = require("fs");
 const archiver = require("archiver");
 
-// Create the main window
 function createWindow() {
   const win = new BrowserWindow({
     width: 1275,
@@ -17,13 +16,11 @@ function createWindow() {
   win.loadFile("index.html");
 }
 
-// Get the path for projects.json
 const getProjectsPath = () => {
   console.log("User data path:", app.getPath("userData"));
   return path.join(app.getPath("userData"), "projects.json");
 };
 
-// Load projects from file
 async function loadProjects() {
   try {
     const projectsPath = getProjectsPath();
@@ -37,13 +34,11 @@ async function loadProjects() {
   }
 }
 
-// Save projects to file
 async function saveProjects(projects) {
   const projectsPath = getProjectsPath();
   await fsPromises.writeFile(projectsPath, JSON.stringify(projects, null, 2));
 }
 
-// IPC Handlers
 ipcMain.handle("load-projects", loadProjects);
 
 ipcMain.handle("list-directory", async (_, { path: dirPath }) => {

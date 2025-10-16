@@ -8,6 +8,7 @@ import {
   Plus,
   ExternalLink,
   HelpCircle,
+  BookOpen,
 } from "lucide-react";
 import { exportMetadata } from "../services/redcap-api";
 import {
@@ -48,6 +49,20 @@ const styles = {
   instructionsItem: {
     marginBottom: "0.5rem",
   },
+  helpButton: {
+    background: "#2563eb",
+    color: "white",
+    border: "none",
+    padding: "0.5rem 1rem",
+    borderRadius: "4px",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    fontSize: "0.9rem",
+    marginTop: "0.5rem",
+    transition: "background 0.2s",
+  },
 };
 
 const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
@@ -65,8 +80,8 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
     url: "",
     token: "",
     formData: null,
-    rocratePath: "", // Added for RO-Crate integration
-    rocrateMetadata: null, // Added for RO-Crate integration
+    rocratePath: "",
+    rocrateMetadata: null,
   };
 
   const [newProject, setNewProject] = useState(emptyProject);
@@ -102,7 +117,7 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
     try {
       await ipcRenderer.invoke("save-projects", updatedProjects);
       setProjects(updatedProjects);
-      await loadProjects(); // Reload projects after save
+      await loadProjects();
     } catch (error) {
       console.error("Error saving projects:", error);
       showNotification("Failed to save projects", "error");
@@ -128,8 +143,8 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
         ...newProject,
         id: projectId,
         formData: formData,
-        rocratePath: "", // Initialize empty
-        rocrateMetadata: null, // Initialize empty
+        rocratePath: "",
+        rocrateMetadata: null,
       };
 
       const updatedProjects = [...projects, projectWithData];
@@ -137,7 +152,6 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
       setNewProject(emptyProject);
       showNotification("Project added successfully");
 
-      // For new projects, go to init-crate
       onProjectSelect(projectWithData, false);
     } catch (error) {
       showNotification(`Failed to add project: ${error.message}`, "error");
@@ -146,7 +160,6 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
 
   const handleUpdate = async (projectId, updatedProject) => {
     try {
-      // Preserve existing RO-Crate data if not modified in edit
       const existingProject = projects.find((p) => p.id === projectId);
       const projectToUpdate = {
         ...updatedProject,
@@ -183,7 +196,6 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
   };
 
   const selectProject = (project) => {
-    // If project has RO-Crate path, go to download, otherwise init-crate
     const isExisting = Boolean(project.rocratePath);
     onProjectSelect(project, isExisting);
   };
@@ -354,6 +366,15 @@ const ManageProjectsView = ({ setCurrentView, onProjectSelect }) => {
               Copy your token and API url into the above boxes to connect.
             </li>
           </ol>
+          <button
+            style={styles.helpButton}
+            onClick={() => setCurrentView("api-instructions")}
+            onMouseEnter={(e) => (e.target.style.background = "#1d4ed8")}
+            onMouseLeave={(e) => (e.target.style.background = "#2563eb")}
+          >
+            <BookOpen size={16} />
+            View Detailed Instructions with Screenshots
+          </button>
         </div>
       </FormCard>
       {notification.open && (
