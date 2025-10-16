@@ -127,7 +127,6 @@ const DatasetForm = ({
       const rocratePath = project.rocratePath;
       const datasetFilepath = downloadedFile;
 
-      // 1. Register Software
       const softwareParams = {
         "@id": SOFTWARE_GUID,
         name: SOFTWARE_NAME,
@@ -142,7 +141,24 @@ const DatasetForm = ({
 
       await register_software(rocratePath, softwareParams);
 
-      // 2. Register Computation
+      const embargoedDatasetParams = {
+        name: `REDCap Database - ${projectName || "Unknown Project"}`,
+        author: formData.author,
+        version: "1.0",
+        datePublished: formData.datePublished,
+        description: `Source REDCap database for project '${
+          projectName || "Unknown Project"
+        }' - data access embargoed`,
+        keywords: ["REDCap", "Database", "Source Data"],
+        format: "REDCap Database",
+      };
+
+      const embargoedDatasetId = await register_dataset(
+        rocratePath,
+        embargoedDatasetParams,
+        "Embargoed"
+      );
+
       const computationParams = {
         name: `REDCap Data Export for ${projectName || "Unknown Project"}`,
         runBy: SOFTWARE_URL,
@@ -152,6 +168,7 @@ const DatasetForm = ({
         }' using the ${SOFTWARE_NAME}.`,
         keywords: ["REDCap", "Data Export", "FAIRSCAPE"],
         usedSoftware: [{ "@id": SOFTWARE_GUID }],
+        usedDataset: [{ "@id": embargoedDatasetId }],
       };
 
       const computationId = await register_computation(
@@ -180,7 +197,6 @@ const DatasetForm = ({
         }
       }
 
-      // 4. Register Dataset
       const keywordsArray = formData.keywords
         ? formData.keywords.split(",").map((keyword) => keyword.trim())
         : [];
@@ -325,8 +341,8 @@ const DatasetForm = ({
                   <TableCell>
                     <input
                       type="text"
-                      name="format" // Changed from dataFormat to match schema key if desired
-                      value={formData.format} // Ensure this matches state key
+                      name="format"
+                      value={formData.format}
                       readOnly
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none sm:text-sm text-gray-500"
                     />
@@ -339,7 +355,7 @@ const DatasetForm = ({
                     {formData["evi:Schema"] && formData["evi:Schema"]["@id"] ? (
                       <input
                         type="text"
-                        value={formData["evi:Schema"]["@id"]} // Display the @id part
+                        value={formData["evi:Schema"]["@id"]}
                         readOnly
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 focus:outline-none sm:text-sm text-gray-500"
                         title="Schema ID used for this dataset"
@@ -374,7 +390,7 @@ const DatasetForm = ({
           </ActionButton>
           <ActionButton
             type="submit"
-            onClick={handleSubmit} // This will be triggered by the form's onSubmit
+            onClick={handleSubmit}
             disabled={isRegistering || !downloadedFile || !project?.rocratePath}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
