@@ -184,10 +184,8 @@ const DatasetForm = ({
             await generateAndRegisterSchemaFromCSV(
               rocratePath,
               datasetFilepath,
-              projectName || "DefaultSchema",
-              `Schema auto-generated from CSV headers for ${
-                projectName || "Unknown Project"
-              }`
+              project.formData,
+              projectName || "Unknown Project"
             );
           finalSchemaObject = { "@id": generatedSchemaIdString };
           setFormData((prev) => ({ ...prev, "evi:Schema": finalSchemaObject }));
