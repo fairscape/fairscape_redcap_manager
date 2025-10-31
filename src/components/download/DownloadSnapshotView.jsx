@@ -135,7 +135,6 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   const [projectData, setProjectData] = useState([]);
   const [projectName, setProjectName] = useState("");
   const [expandedForms, setExpandedForms] = useState(new Set());
-  const [selectedForms, setSelectedForms] = useState(new Set());
   const [selectedFields, setSelectedFields] = useState(new Set());
   const [downloadMode, setDownloadMode] = useState("fields");
   const [dateRange, setDateRange] = useState({});
@@ -168,26 +167,24 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
   };
 
   const toggleFormSelection = (formName) => {
-    const newSelectedForms = new Set(selectedForms);
-    const formFields =
-      projectData.find((form) => form.form_name === formName)?.fields || [];
+    const form = projectData.find((f) => f.form_name === formName);
+    if (!form) return;
 
-    if (newSelectedForms.has(formName)) {
-      newSelectedForms.delete(formName);
-      const newSelectedFields = new Set(selectedFields);
-      formFields.forEach((field) => {
-        newSelectedFields.delete(`${formName}.${field.field_name}`);
-      });
-      setSelectedFields(newSelectedFields);
+    const newSelectedFields = new Set(selectedFields);
+    const formFieldKeys = form.fields.map(
+      (field) => `${formName}.${field.field_name}`
+    );
+    const allFieldsSelected = formFieldKeys.every((key) =>
+      selectedFields.has(key)
+    );
+
+    if (allFieldsSelected) {
+      formFieldKeys.forEach((key) => newSelectedFields.delete(key));
     } else {
-      newSelectedForms.add(formName);
-      const newSelectedFields = new Set(selectedFields);
-      formFields.forEach((field) => {
-        newSelectedFields.add(`${formName}.${field.field_name}`);
-      });
-      setSelectedFields(newSelectedFields);
+      formFieldKeys.forEach((key) => newSelectedFields.add(key));
     }
-    setSelectedForms(newSelectedForms);
+
+    setSelectedFields(newSelectedFields);
   };
 
   const toggleFieldSelection = (formName, fieldName) => {
@@ -196,26 +193,10 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
 
     if (newSelectedFields.has(fieldKey)) {
       newSelectedFields.delete(fieldKey);
-      const formFields =
-        projectData
-          .find((form) => form.form_name === formName)
-          ?.fields.map((field) => `${formName}.${field.field_name}`) || [];
-      const hasSelectedFields = formFields.some((field) =>
-        newSelectedFields.has(field)
-      );
-      if (!hasSelectedFields) {
-        const newSelectedForms = new Set(selectedForms);
-        newSelectedForms.delete(formName);
-        setSelectedForms(newSelectedForms);
-      }
     } else {
       newSelectedFields.add(fieldKey);
-      if (!selectedForms.has(formName)) {
-        const newSelectedForms = new Set(selectedForms);
-        newSelectedForms.add(formName);
-        setSelectedForms(newSelectedForms);
-      }
     }
+
     setSelectedFields(newSelectedFields);
   };
 
@@ -259,15 +240,31 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
       console.warn("No project data available for selecting forms");
       return;
     }
-    const allForms = new Set(projectData.map((form) => form.form_name));
     const allFields = new Set();
     projectData.forEach((form) => {
       form.fields.forEach((field) => {
         allFields.add(`${form.form_name}.${field.field_name}`);
       });
     });
-    setSelectedForms(allForms);
     setSelectedFields(allFields);
+  };
+
+  const selectAllNonPhi = () => {
+    if (!projectData.length) {
+      console.warn("No project data available for selecting fields");
+      return;
+    }
+    const nonPhiFields = new Set();
+
+    projectData.forEach((form) => {
+      form.fields.forEach((field) => {
+        if (field.phi !== "y") {
+          nonPhiFields.add(`${form.form_name}.${field.field_name}`);
+        }
+      });
+    });
+
+    setSelectedFields(nonPhiFields);
   };
 
   const handleDateChange = (field, value) => {
@@ -283,9 +280,13 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
         options.dateRangeBegin = dateRange.dateRangeBegin;
         options.dateRangeEnd = dateRange.dateRangeEnd;
       } else {
-        const allFormsSelected = selectedForms.size === projectData.length;
-        if (!allFormsSelected) {
-          options.forms = Array.from(selectedForms);
+        const totalFields = projectData.reduce(
+          (sum, form) => sum + form.fields.length,
+          0
+        );
+        const allFieldsSelected = selectedFields.size === totalFields;
+
+        if (!allFieldsSelected) {
           options.fields = Array.from(selectedFields).map((field) => {
             const [formName, fieldName] = field.split(".");
             return fieldName;
@@ -295,33 +296,39 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
 
       const data = await exportRecords(project.url, project.token, options);
       const filename = generateFilename();
-      const filePath = await downloadFile(data, filename);
+      const savedPath = await downloadFile(data, filename);
 
-      onDownloadComplete(filePath, null);
+      if (onDownloadComplete) {
+        onDownloadComplete(savedPath);
+      }
     } catch (error) {
-      console.error("Download failed:", error);
-      setError("Failed to download data: " + error.message);
+      console.error("Error downloading data:", error);
+      setError(`Failed to download data: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (error) {
+    return (
+      <PageContainer>
+        <div>Error: {error}</div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <HeaderSection>
         <div style={styles.titleContainer}>
-          <Title>{projectName} - Project Export</Title>
+          <Title>Download Snapshot</Title>
           <HelpCircle
             size={20}
             style={styles.helpIcon}
             onClick={() => setShowHelp(true)}
           />
         </div>
-        {error && (
-          <div style={{ color: "red", marginBottom: "1rem" }}>
-            Error: {error}
-          </div>
-        )}
+        <HelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} />
 
         <ModeSelectorContainer>
           <ModeButton
@@ -343,6 +350,9 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
             <SelectAllButton onClick={selectAllForms}>
               Select All Forms
             </SelectAllButton>
+            <SelectAllButton onClick={selectAllNonPhi}>
+              Select All Non-PHI
+            </SelectAllButton>
           </ButtonContainer>
         )}
 
@@ -354,48 +364,42 @@ const DownloadSnapshotView = ({ project, onDownloadComplete }) => {
         )}
       </HeaderSection>
 
-      <ScrollContent>
-        {downloadMode === "fields" && (
+      {downloadMode === "fields" && (
+        <ScrollContent>
           <FormContainer>
-            {projectData && projectData.length > 0 ? (
-              projectData.map((form) => (
+            {projectData.map((form) => {
+              const formFieldKeys = form.fields.map(
+                (field) => `${form.form_name}.${field.field_name}`
+              );
+              const isSelected = formFieldKeys.every((key) =>
+                selectedFields.has(key)
+              );
+
+              return (
                 <FormCard
                   key={form.form_name}
                   form={form}
                   isExpanded={expandedForms.has(form.form_name)}
-                  isSelected={selectedForms.has(form.form_name)}
+                  isSelected={isSelected}
                   selectedFields={selectedFields}
                   onToggleExpand={() => toggleForm(form.form_name)}
                   onToggleSelect={() => toggleFormSelection(form.form_name)}
                   onFieldSelect={toggleFieldSelection}
                 />
-              ))
-            ) : (
-              <div>No form data available</div>
-            )}
+              );
+            })}
           </FormContainer>
-        )}
-      </ScrollContent>
+        </ScrollContent>
+      )}
 
       <Footer>
-        <DownloadButton
-          onClick={handleDownload}
-          disabled={
-            (downloadMode === "fields" && selectedForms.size === 0) ||
-            (downloadMode === "date" &&
-              (!dateRange.dateRangeBegin || !dateRange.dateRangeEnd)) ||
-            isLoading ||
-            !projectData.length
-          }
-        >
+        <DownloadButton onClick={handleDownload} disabled={isLoading}>
           <Download size={16} />
           <span>
             {isLoading ? "Downloading..." : "Download Latest Snapshot"}
           </span>
         </DownloadButton>
       </Footer>
-
-      <HelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </PageContainer>
   );
 };
