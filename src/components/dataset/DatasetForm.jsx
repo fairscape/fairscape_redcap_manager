@@ -19,6 +19,8 @@ import {
   FormActions,
   ActionButton,
 } from "../FormStyles";
+import fs from "fs";
+import path from "path";
 
 const SOFTWARE_GUID = "ark:59853/software-fairscape-redcap-gui";
 const SOFTWARE_URL = "https://github.com/fairscape/fairscape_redcap_manager";
@@ -105,6 +107,22 @@ const DatasetForm = ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const addOutputsToROCrate = (rocratePath, datasetId) => {
+    const rocrateFile = path.join(rocratePath, "ro-crate-metadata.json");
+    const rocrate = JSON.parse(fs.readFileSync(rocrateFile, "utf-8"));
+
+    if (rocrate["@graph"] && rocrate["@graph"][1]) {
+      if (!rocrate["@graph"][1]["https://w3id.org/EVI#outputs"]) {
+        rocrate["@graph"][1]["https://w3id.org/EVI#outputs"] = [];
+      }
+      rocrate["@graph"][1]["https://w3id.org/EVI#outputs"].push({
+        "@id": datasetId,
+      });
+
+      fs.writeFileSync(rocrateFile, JSON.stringify(rocrate, null, 2), "utf-8");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -218,6 +236,8 @@ const DatasetForm = ({
         datasetParams,
         datasetFilepath
       );
+
+      addOutputsToROCrate(rocratePath, datasetId);
 
       onSubmit({
         ...formData,
